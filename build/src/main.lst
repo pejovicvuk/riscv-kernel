@@ -1,0 +1,354 @@
+GAS LISTING /tmp/cc1GUdJj.s 			page 1
+
+
+   1              		.file	"main.cpp"
+   2              		.option nopic
+   3              		.option norelax
+   4              		.attribute arch, "rv64i2p0_m2p0_a2p0"
+   5              		.attribute unaligned_access, 0
+   6              		.attribute stack_align, 16
+   7              		.text
+   8              	.Ltext0:
+   9              		.align	2
+  10              		.globl	_Z5kputcc
+  12              	_Z5kputcc:
+  13              	.LFB0:
+  14              		.file 1 "src/main.cpp"
+   1:src/main.cpp  **** #include "../lib/hw.h"   // adjust path to wherever your hw.h lives
+   2:src/main.cpp  **** 
+   3:src/main.cpp  **** // Send one character to the console controller.
+   4:src/main.cpp  **** void kputc(char c) {
+  15              		.loc 1 4 20
+  16              		.cfi_startproc
+  17              	.LVL0:
+  18 0000 130101FF 		addi	sp,sp,-16
+  19              		.cfi_def_cfa_offset 16
+  20 0004 23348100 		sd	s0,8(sp)
+  21              		.cfi_offset 8, -8
+  22 0008 13040101 		addi	s0,sp,16
+  23              		.cfi_def_cfa 8, 0
+  24              	.L2:
+   5:src/main.cpp  ****     // CONSOLE_STATUS is an address (a constant from hw.h). To read the
+   6:src/main.cpp  ****     // byte living at that address, we reinterpret the integer address as
+   7:src/main.cpp  ****     // a pointer-to-volatile-char and dereference it. 'volatile' tells the
+   8:src/main.cpp  ****     // compiler the value can change outside our code (the hardware sets it),
+   9:src/main.cpp  ****     // so it must actually re-read memory every loop pass, not cache it.
+  10:src/main.cpp  ****     while ((*(volatile char*)CONSOLE_STATUS & (1 << 5)) == 0) {
+  25              		.loc 1 10 5
+  26              		.loc 1 10 57
+  27              		.loc 1 10 13 is_stmt 0
+  28 000c 97070000 		ld	a5,CONSOLE_STATUS
+  28      83B70700 
+  29 0014 83C70700 		lbu	a5,0(a5)
+  30 0018 93F7F70F 		andi	a5,a5,0xff
+  31              		.loc 1 10 57
+  32 001c 93F70702 		andi	a5,a5,32
+  33 0020 E38607FE 		beqz	a5,.L2
+  11:src/main.cpp  ****         // spin: bit 5 == 0 means "not ready to accept a char to send"
+  12:src/main.cpp  ****     }
+  13:src/main.cpp  ****     // Ready. Write the byte into the transmit-data register.
+  14:src/main.cpp  ****     *(volatile char*)CONSOLE_TX_DATA = c;
+  34              		.loc 1 14 5 is_stmt 1
+  35 0024 97070000 		ld	a5,CONSOLE_TX_DATA
+  35      83B70700 
+  36              		.loc 1 14 38 is_stmt 0
+  37 002c 2380A700 		sb	a0,0(a5)
+  15:src/main.cpp  **** }
+  38              		.loc 1 15 1
+  39 0030 03348100 		ld	s0,8(sp)
+  40              		.cfi_restore 8
+  41              		.cfi_def_cfa 2, 16
+GAS LISTING /tmp/cc1GUdJj.s 			page 2
+
+
+  42 0034 13010101 		addi	sp,sp,16
+  43              		.cfi_def_cfa_offset 0
+  44 0038 67800000 		jr	ra
+  45              		.cfi_endproc
+  46              	.LFE0:
+  48              		.align	2
+  49              		.globl	_Z5kputsPKc
+  51              	_Z5kputsPKc:
+  52              	.LFB1:
+  16:src/main.cpp  **** 
+  17:src/main.cpp  **** // Convenience: print a whole string by sending char by char.
+  18:src/main.cpp  **** void kputs(const char* s) {
+  53              		.loc 1 18 27 is_stmt 1
+  54              		.cfi_startproc
+  55              	.LVL1:
+  56 003c 130101FE 		addi	sp,sp,-32
+  57              		.cfi_def_cfa_offset 32
+  58 0040 233C1100 		sd	ra,24(sp)
+  59 0044 23388100 		sd	s0,16(sp)
+  60 0048 23349100 		sd	s1,8(sp)
+  61              		.cfi_offset 1, -8
+  62              		.cfi_offset 8, -16
+  63              		.cfi_offset 9, -24
+  64 004c 13040102 		addi	s0,sp,32
+  65              		.cfi_def_cfa 8, 0
+  66 0050 93040500 		mv	s1,a0
+  67              	.LVL2:
+  68              	.L6:
+  19:src/main.cpp  ****     while (*s) kputc(*s++);
+  69              		.loc 1 19 5 discriminator 2
+  70              		.loc 1 19 13 discriminator 2
+  71              		.loc 1 19 12 is_stmt 0 discriminator 2
+  72 0054 03C50400 		lbu	a0,0(s1)
+  73              		.loc 1 19 13 discriminator 2
+  74 0058 630A0500 		beqz	a0,.L4
+  75              		.loc 1 19 16 is_stmt 1 discriminator 1
+  76              		.loc 1 19 24 is_stmt 0 discriminator 1
+  77 005c 93841400 		addi	s1,s1,1
+  78              	.LVL3:
+  79              		.loc 1 19 21 discriminator 1
+  80 0060 97000000 		call	_Z5kputcc
+  80      E7800000 
+  81              	.LVL4:
+  82              		.loc 1 19 5 discriminator 1
+  83 0068 6FF0DFFE 		j	.L6
+  84              	.L4:
+  20:src/main.cpp  **** }
+  85              		.loc 1 20 1
+  86 006c 83308101 		ld	ra,24(sp)
+  87              		.cfi_restore 1
+  88 0070 03340101 		ld	s0,16(sp)
+  89              		.cfi_restore 8
+  90              		.cfi_def_cfa 2, 32
+  91 0074 83348100 		ld	s1,8(sp)
+  92              		.cfi_restore 9
+  93              	.LVL5:
+  94 0078 13010102 		addi	sp,sp,32
+GAS LISTING /tmp/cc1GUdJj.s 			page 3
+
+
+  95              		.cfi_def_cfa_offset 0
+  96 007c 67800000 		jr	ra
+  97              		.cfi_endproc
+  98              	.LFE1:
+ 100              		.section	.rodata.str1.8,"aMS",@progbits,1
+ 101              		.align	3
+ 102              	.LC0:
+ 103 0000 3E3E206B 		.string	">> kernel: starting\n"
+ 103      65726E65 
+ 103      6C3A2073 
+ 103      74617274 
+ 103      696E670A 
+ 104 0015 000000   		.align	3
+ 105              	.LC1:
+ 106 0018 3E3E206B 		.string	">> kernel: userMain returned, halting\n"
+ 106      65726E65 
+ 106      6C3A2075 
+ 106      7365724D 
+ 106      61696E20 
+ 107              		.text
+ 108              		.align	2
+ 109              		.globl	main
+ 111              	main:
+ 112              	.LFB2:
+  21:src/main.cpp  **** 
+  22:src/main.cpp  **** void userMain();   // forward declaration: defined elsewhere (your test file)
+  23:src/main.cpp  **** 
+  24:src/main.cpp  **** int main() {
+ 113              		.loc 1 24 12 is_stmt 1
+ 114              		.cfi_startproc
+ 115 0080 130101FF 		addi	sp,sp,-16
+ 116              		.cfi_def_cfa_offset 16
+ 117 0084 23341100 		sd	ra,8(sp)
+ 118 0088 23308100 		sd	s0,0(sp)
+ 119              		.cfi_offset 1, -8
+ 120              		.cfi_offset 8, -16
+ 121 008c 13040101 		addi	s0,sp,16
+ 122              		.cfi_def_cfa 8, 0
+  25:src/main.cpp  ****     kputs(">> kernel: starting\n");
+ 123              		.loc 1 25 5
+ 124              		.loc 1 25 10 is_stmt 0
+ 125 0090 17050000 		lla	a0,.LC0
+ 125      13050500 
+ 126 0098 97000000 		call	_Z5kputsPKc
+ 126      E7800000 
+ 127              	.LVL6:
+  26:src/main.cpp  **** 
+  27:src/main.cpp  ****     userMain();    // THE CHEAT: calling it as a plain function for now.
+ 128              		.loc 1 27 5 is_stmt 1
+ 129              		.loc 1 27 13 is_stmt 0
+ 130 00a0 97000000 		call	_Z8userMainv
+ 130      E7800000 
+ 131              	.LVL7:
+  28:src/main.cpp  ****                    // In the real kernel this becomes "wrap userMain as the
+  29:src/main.cpp  ****                    // body of the first thread and let the scheduler run it."
+  30:src/main.cpp  **** 
+  31:src/main.cpp  ****     kputs(">> kernel: userMain returned, halting\n");
+GAS LISTING /tmp/cc1GUdJj.s 			page 4
+
+
+ 132              		.loc 1 31 5 is_stmt 1
+ 133              		.loc 1 31 10 is_stmt 0
+ 134 00a8 17050000 		lla	a0,.LC1
+ 134      13050500 
+ 135 00b0 97000000 		call	_Z5kputsPKc
+ 135      E7800000 
+ 136              	.LVL8:
+  32:src/main.cpp  **** 
+  33:src/main.cpp  ****     // Halt the emulator: writing the 32-bit value 0x5555 to physical
+  34:src/main.cpp  ****     // address 0x100000 is qemu's "guest asked to power off" signal, so
+  35:src/main.cpp  ****     // `make qemu` returns to your shell instead of hanging.
+  36:src/main.cpp  ****     *(volatile int*)0x100000 = 0x5555;
+ 137              		.loc 1 36 5 is_stmt 1
+ 138              		.loc 1 36 30 is_stmt 0
+ 139 00b8 37071000 		li	a4,1048576
+ 140 00bc B7570000 		li	a5,20480
+ 141 00c0 9B875755 		addiw	a5,a5,1365
+ 142 00c4 2320F700 		sw	a5,0(a4)
+  37:src/main.cpp  **** 
+  38:src/main.cpp  ****     return 0;   // never really reached, but keeps the signature honest
+ 143              		.loc 1 38 5 is_stmt 1
+  39:src/main.cpp  **** }...
+ 144              		.loc 1 39 1 is_stmt 0
+ 145 00c8 13050000 		li	a0,0
+ 146 00cc 83308100 		ld	ra,8(sp)
+ 147              		.cfi_restore 1
+ 148 00d0 03340100 		ld	s0,0(sp)
+ 149              		.cfi_restore 8
+ 150              		.cfi_def_cfa 2, 16
+ 151 00d4 13010101 		addi	sp,sp,16
+ 152              		.cfi_def_cfa_offset 0
+ 153 00d8 67800000 		jr	ra
+ 154              		.cfi_endproc
+ 155              	.LFE2:
+ 157              	.Letext0:
+ 158              		.file 2 "src/../lib/hw.h"
+GAS LISTING /tmp/cc1GUdJj.s 			page 5
+
+
+DEFINED SYMBOLS
+                            *ABS*:0000000000000000 main.cpp
+     /tmp/cc1GUdJj.s:12     .text:0000000000000000 _Z5kputcc
+     /tmp/cc1GUdJj.s:16     .text:0000000000000000 .L0 
+     /tmp/cc1GUdJj.s:18     .text:0000000000000000 .L0 
+     /tmp/cc1GUdJj.s:19     .text:0000000000000004 .L0 
+     /tmp/cc1GUdJj.s:21     .text:0000000000000008 .L0 
+     /tmp/cc1GUdJj.s:23     .text:000000000000000c .L0 
+     /tmp/cc1GUdJj.s:26     .text:000000000000000c .L0 
+     /tmp/cc1GUdJj.s:27     .text:000000000000000c .L0 
+     /tmp/cc1GUdJj.s:28     .text:000000000000000c .L0 
+     /tmp/cc1GUdJj.s:32     .text:000000000000001c .L0 
+     /tmp/cc1GUdJj.s:35     .text:0000000000000024 .L0 
+     /tmp/cc1GUdJj.s:37     .text:000000000000002c .L0 
+     /tmp/cc1GUdJj.s:39     .text:0000000000000030 .L0 
+     /tmp/cc1GUdJj.s:40     .text:0000000000000034 .L0 
+     /tmp/cc1GUdJj.s:41     .text:0000000000000034 .L0 
+     /tmp/cc1GUdJj.s:43     .text:0000000000000038 .L0 
+     /tmp/cc1GUdJj.s:45     .text:000000000000003c .L0 
+     /tmp/cc1GUdJj.s:51     .text:000000000000003c _Z5kputsPKc
+     /tmp/cc1GUdJj.s:54     .text:000000000000003c .L0 
+     /tmp/cc1GUdJj.s:56     .text:000000000000003c .L0 
+     /tmp/cc1GUdJj.s:57     .text:0000000000000040 .L0 
+     /tmp/cc1GUdJj.s:61     .text:000000000000004c .L0 
+     /tmp/cc1GUdJj.s:62     .text:000000000000004c .L0 
+     /tmp/cc1GUdJj.s:63     .text:000000000000004c .L0 
+     /tmp/cc1GUdJj.s:65     .text:0000000000000050 .L0 
+     /tmp/cc1GUdJj.s:70     .text:0000000000000054 .L0 
+     /tmp/cc1GUdJj.s:71     .text:0000000000000054 .L0 
+     /tmp/cc1GUdJj.s:72     .text:0000000000000054 .L0 
+     /tmp/cc1GUdJj.s:74     .text:0000000000000058 .L0 
+     /tmp/cc1GUdJj.s:76     .text:000000000000005c .L0 
+     /tmp/cc1GUdJj.s:77     .text:000000000000005c .L0 
+     /tmp/cc1GUdJj.s:80     .text:0000000000000060 .L0 
+     /tmp/cc1GUdJj.s:83     .text:0000000000000068 .L0 
+     /tmp/cc1GUdJj.s:86     .text:000000000000006c .L0 
+     /tmp/cc1GUdJj.s:87     .text:0000000000000070 .L0 
+     /tmp/cc1GUdJj.s:89     .text:0000000000000074 .L0 
+     /tmp/cc1GUdJj.s:90     .text:0000000000000074 .L0 
+     /tmp/cc1GUdJj.s:92     .text:0000000000000078 .L0 
+     /tmp/cc1GUdJj.s:95     .text:000000000000007c .L0 
+     /tmp/cc1GUdJj.s:97     .text:0000000000000080 .L0 
+     /tmp/cc1GUdJj.s:111    .text:0000000000000080 main
+     /tmp/cc1GUdJj.s:114    .text:0000000000000080 .L0 
+     /tmp/cc1GUdJj.s:115    .text:0000000000000080 .L0 
+     /tmp/cc1GUdJj.s:116    .text:0000000000000084 .L0 
+     /tmp/cc1GUdJj.s:119    .text:000000000000008c .L0 
+     /tmp/cc1GUdJj.s:120    .text:000000000000008c .L0 
+     /tmp/cc1GUdJj.s:122    .text:0000000000000090 .L0 
+     /tmp/cc1GUdJj.s:124    .text:0000000000000090 .L0 
+     /tmp/cc1GUdJj.s:125    .text:0000000000000090 .L0 
+     /tmp/cc1GUdJj.s:129    .text:00000000000000a0 .L0 
+     /tmp/cc1GUdJj.s:130    .text:00000000000000a0 .L0 
+     /tmp/cc1GUdJj.s:133    .text:00000000000000a8 .L0 
+     /tmp/cc1GUdJj.s:134    .text:00000000000000a8 .L0 
+     /tmp/cc1GUdJj.s:138    .text:00000000000000b8 .L0 
+     /tmp/cc1GUdJj.s:139    .text:00000000000000b8 .L0 
+GAS LISTING /tmp/cc1GUdJj.s 			page 6
+
+
+     /tmp/cc1GUdJj.s:144    .text:00000000000000c8 .L0 
+     /tmp/cc1GUdJj.s:145    .text:00000000000000c8 .L0 
+     /tmp/cc1GUdJj.s:147    .text:00000000000000d0 .L0 
+     /tmp/cc1GUdJj.s:149    .text:00000000000000d4 .L0 
+     /tmp/cc1GUdJj.s:150    .text:00000000000000d4 .L0 
+     /tmp/cc1GUdJj.s:152    .text:00000000000000d8 .L0 
+     /tmp/cc1GUdJj.s:154    .text:00000000000000dc .L0 
+     /tmp/cc1GUdJj.s:159    .text:00000000000000dc .L0 
+     /tmp/cc1GUdJj.s:28     .text:000000000000000c .L0 
+     /tmp/cc1GUdJj.s:35     .text:0000000000000024 .L0 
+     /tmp/cc1GUdJj.s:102    .rodata.str1.8:0000000000000000 .LC0
+     /tmp/cc1GUdJj.s:125    .text:0000000000000090 .L0 
+     /tmp/cc1GUdJj.s:105    .rodata.str1.8:0000000000000018 .LC1
+     /tmp/cc1GUdJj.s:134    .text:00000000000000a8 .L0 
+     /tmp/cc1GUdJj.s:24     .text:000000000000000c .L2
+     /tmp/cc1GUdJj.s:84     .text:000000000000006c .L4
+     /tmp/cc1GUdJj.s:68     .text:0000000000000054 .L6
+     /tmp/cc1GUdJj.s:380    .debug_abbrev:0000000000000000 .Ldebug_abbrev0
+     /tmp/cc1GUdJj.s:695    .debug_str:0000000000000041 .LASF23
+     /tmp/cc1GUdJj.s:729    .debug_str:00000000000001de .LASF24
+     /tmp/cc1GUdJj.s:731    .debug_str:00000000000001eb .LASF25
+     /tmp/cc1GUdJj.s:8      .text:0000000000000000 .Ltext0
+     /tmp/cc1GUdJj.s:157    .text:00000000000000dc .Letext0
+     /tmp/cc1GUdJj.s:683    .debug_line:0000000000000000 .Ldebug_line0
+     /tmp/cc1GUdJj.s:685    .debug_str:0000000000000000 .LASF0
+     /tmp/cc1GUdJj.s:725    .debug_str:00000000000001bb .LASF1
+     /tmp/cc1GUdJj.s:707    .debug_str:000000000000014a .LASF2
+     /tmp/cc1GUdJj.s:701    .debug_str:000000000000012a .LASF4
+     /tmp/cc1GUdJj.s:697    .debug_str:0000000000000105 .LASF3
+     /tmp/cc1GUdJj.s:691    .debug_str:000000000000002a .LASF5
+     /tmp/cc1GUdJj.s:699    .debug_str:0000000000000117 .LASF6
+     /tmp/cc1GUdJj.s:723    .debug_str:00000000000001a8 .LASF7
+     /tmp/cc1GUdJj.s:735    .debug_str:0000000000000200 .LASF8
+     /tmp/cc1GUdJj.s:687    .debug_str:000000000000000d .LASF9
+     /tmp/cc1GUdJj.s:689    .debug_str:000000000000001b .LASF10
+     /tmp/cc1GUdJj.s:733    .debug_str:00000000000001f1 .LASF11
+     /tmp/cc1GUdJj.s:693    .debug_str:0000000000000031 .LASF12
+     /tmp/cc1GUdJj.s:727    .debug_str:00000000000001ce .LASF13
+     /tmp/cc1GUdJj.s:705    .debug_str:000000000000013e .LASF14
+     /tmp/cc1GUdJj.s:719    .debug_str:0000000000000188 .LASF15
+     /tmp/cc1GUdJj.s:713    .debug_str:0000000000000163 .LASF16
+     /tmp/cc1GUdJj.s:709    .debug_str:0000000000000158 .LASF17
+     /tmp/cc1GUdJj.s:112    .text:0000000000000080 .LFB2
+     /tmp/cc1GUdJj.s:155    .text:00000000000000dc .LFE2
+     /tmp/cc1GUdJj.s:127    .text:00000000000000a0 .LVL6
+     /tmp/cc1GUdJj.s:131    .text:00000000000000a8 .LVL7
+     /tmp/cc1GUdJj.s:136    .text:00000000000000b8 .LVL8
+     /tmp/cc1GUdJj.s:717    .debug_str:0000000000000182 .LASF18
+     /tmp/cc1GUdJj.s:737    .debug_str:0000000000000210 .LASF21
+     /tmp/cc1GUdJj.s:52     .text:000000000000003c .LFB1
+     /tmp/cc1GUdJj.s:98     .text:0000000000000080 .LFE1
+     /tmp/cc1GUdJj.s:659    .debug_loc:0000000000000000 .LLST0
+     /tmp/cc1GUdJj.s:81     .text:0000000000000068 .LVL4
+     /tmp/cc1GUdJj.s:739    .debug_str:000000000000021c .LASF19
+     /tmp/cc1GUdJj.s:711    .debug_str:000000000000015d .LASF20
+     /tmp/cc1GUdJj.s:721    .debug_str:000000000000019e .LASF22
+     /tmp/cc1GUdJj.s:13     .text:0000000000000000 .LFB0
+GAS LISTING /tmp/cc1GUdJj.s 			page 7
+
+
+     /tmp/cc1GUdJj.s:46     .text:000000000000003c .LFE0
+     /tmp/cc1GUdJj.s:703    .debug_str:0000000000000131 .LASF26
+     /tmp/cc1GUdJj.s:715    .debug_str:0000000000000179 .LASF27
+     /tmp/cc1GUdJj.s:55     .text:000000000000003c .LVL1
+     /tmp/cc1GUdJj.s:67     .text:0000000000000054 .LVL2
+     /tmp/cc1GUdJj.s:93     .text:0000000000000078 .LVL5
+     /tmp/cc1GUdJj.s:160    .debug_info:0000000000000000 .Ldebug_info0
+
+UNDEFINED SYMBOLS
+CONSOLE_STATUS
+CONSOLE_TX_DATA
+_Z8userMainv

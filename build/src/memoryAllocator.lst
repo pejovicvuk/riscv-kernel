@@ -1,0 +1,159 @@
+GAS LISTING /tmp/ccggdnxw.s 			page 1
+
+
+   1              		.file	"memoryAllocator.cpp"
+   2              		.option nopic
+   3              		.option norelax
+   4              		.attribute arch, "rv64i2p0_m2p0_a2p0"
+   5              		.attribute unaligned_access, 0
+   6              		.attribute stack_align, 16
+   7              		.text
+   8              	.Ltext0:
+   9              		.align	2
+  10              		.globl	_ZN15MemoryAllocator4initEv
+  12              	_ZN15MemoryAllocator4initEv:
+  13              	.LFB0:
+  14              		.file 1 "src/memoryAllocator.cpp"
+   1:src/memoryAllocator.cpp **** #include "../h/MemoryAllocator.hpp"
+   2:src/memoryAllocator.cpp **** #include "../lib/hw.h"
+   3:src/memoryAllocator.cpp **** 
+   4:src/memoryAllocator.cpp **** MemoryAllocator::FreeBlock* MemoryAllocator::freeListHead = nullptr;
+   5:src/memoryAllocator.cpp **** 
+   6:src/memoryAllocator.cpp **** int MemoryAllocator::init() {
+  15              		.loc 1 6 29
+  16              		.cfi_startproc
+  17 0000 130101FF 		addi	sp,sp,-16
+  18              		.cfi_def_cfa_offset 16
+  19 0004 23348100 		sd	s0,8(sp)
+  20              		.cfi_offset 8, -8
+  21 0008 13040101 		addi	s0,sp,16
+  22              		.cfi_def_cfa 8, 0
+   7:src/memoryAllocator.cpp ****     freeListHead = (FreeBlock*)HEAP_START_ADDR;
+  23              		.loc 1 7 5
+  24              		.loc 1 7 18 is_stmt 0
+  25 000c 17070000 		lla	a4,HEAP_START_ADDR
+  25      13070700 
+  26 0014 83360700 		ld	a3,0(a4)
+  27 0018 97070000 		lla	a5,_ZN15MemoryAllocator12freeListHeadE
+  27      93870700 
+  28 0020 23B0D700 		sd	a3,0(a5)
+   8:src/memoryAllocator.cpp ****     freeListHead->next = nullptr;
+  29              		.loc 1 8 5 is_stmt 1
+  30              		.loc 1 8 24 is_stmt 0
+  31 0024 23B00600 		sd	zero,0(a3)
+   9:src/memoryAllocator.cpp ****     freeListHead->size = (char*)HEAP_END_ADDR - (char*)HEAP_START_ADDR;
+  32              		.loc 1 9 5 is_stmt 1
+  33              		.loc 1 9 49 is_stmt 0
+  34 0028 03370700 		ld	a4,0(a4)
+  35              		.loc 1 9 19
+  36 002c 83B70700 		ld	a5,0(a5)
+  37              		.loc 1 9 47
+  38 0030 17050000 		ld	a0,HEAP_END_ADDR
+  38      03350500 
+  39 0038 3305E540 		sub	a0,a0,a4
+  40              		.loc 1 9 24
+  41 003c 23B4A700 		sd	a0,8(a5)
+  10:src/memoryAllocator.cpp ****     return freeListHead->size;
+  42              		.loc 1 10 5 is_stmt 1
+  11:src/memoryAllocator.cpp **** }...
+  43              		.loc 1 11 1 is_stmt 0
+  44 0040 1B050500 		sext.w	a0,a0
+GAS LISTING /tmp/ccggdnxw.s 			page 2
+
+
+  45 0044 03348100 		ld	s0,8(sp)
+  46              		.cfi_restore 8
+  47              		.cfi_def_cfa 2, 16
+  48 0048 13010101 		addi	sp,sp,16
+  49              		.cfi_def_cfa_offset 0
+  50 004c 67800000 		jr	ra
+  51              		.cfi_endproc
+  52              	.LFE0:
+  54              		.globl	_ZN15MemoryAllocator12freeListHeadE
+  55              		.section	.sbss,"aw",@nobits
+  56              		.align	3
+  59              	_ZN15MemoryAllocator12freeListHeadE:
+  60 0000 00000000 		.zero	8
+  60      00000000 
+  61              		.text
+  62              	.Letext0:
+  63              		.file 2 "src/../h/../lib/hw.h"
+  64              		.file 3 "src/../h/MemoryAllocator.hpp"
+GAS LISTING /tmp/ccggdnxw.s 			page 3
+
+
+DEFINED SYMBOLS
+                            *ABS*:0000000000000000 memoryAllocator.cpp
+     /tmp/ccggdnxw.s:12     .text:0000000000000000 _ZN15MemoryAllocator4initEv
+     /tmp/ccggdnxw.s:16     .text:0000000000000000 .L0 
+     /tmp/ccggdnxw.s:17     .text:0000000000000000 .L0 
+     /tmp/ccggdnxw.s:18     .text:0000000000000004 .L0 
+     /tmp/ccggdnxw.s:20     .text:0000000000000008 .L0 
+     /tmp/ccggdnxw.s:22     .text:000000000000000c .L0 
+     /tmp/ccggdnxw.s:24     .text:000000000000000c .L0 
+     /tmp/ccggdnxw.s:25     .text:000000000000000c .L0 
+     /tmp/ccggdnxw.s:59     .sbss:0000000000000000 _ZN15MemoryAllocator12freeListHeadE
+     /tmp/ccggdnxw.s:30     .text:0000000000000024 .L0 
+     /tmp/ccggdnxw.s:31     .text:0000000000000024 .L0 
+     /tmp/ccggdnxw.s:33     .text:0000000000000028 .L0 
+     /tmp/ccggdnxw.s:34     .text:0000000000000028 .L0 
+     /tmp/ccggdnxw.s:36     .text:000000000000002c .L0 
+     /tmp/ccggdnxw.s:38     .text:0000000000000030 .L0 
+     /tmp/ccggdnxw.s:41     .text:000000000000003c .L0 
+     /tmp/ccggdnxw.s:43     .text:0000000000000040 .L0 
+     /tmp/ccggdnxw.s:44     .text:0000000000000040 .L0 
+     /tmp/ccggdnxw.s:46     .text:0000000000000048 .L0 
+     /tmp/ccggdnxw.s:47     .text:0000000000000048 .L0 
+     /tmp/ccggdnxw.s:49     .text:000000000000004c .L0 
+     /tmp/ccggdnxw.s:51     .text:0000000000000050 .L0 
+     /tmp/ccggdnxw.s:65     .text:0000000000000050 .L0 
+     /tmp/ccggdnxw.s:25     .text:000000000000000c .L0 
+     /tmp/ccggdnxw.s:27     .text:0000000000000018 .L0 
+     /tmp/ccggdnxw.s:38     .text:0000000000000030 .L0 
+     /tmp/ccggdnxw.s:297    .debug_abbrev:0000000000000000 .Ldebug_abbrev0
+     /tmp/ccggdnxw.s:689    .debug_str:000000000000006e .LASF23
+     /tmp/ccggdnxw.s:727    .debug_str:000000000000026e .LASF24
+     /tmp/ccggdnxw.s:723    .debug_str:0000000000000263 .LASF25
+     /tmp/ccggdnxw.s:8      .text:0000000000000000 .Ltext0
+     /tmp/ccggdnxw.s:62     .text:0000000000000050 .Letext0
+     /tmp/ccggdnxw.s:669    .debug_line:0000000000000000 .Ldebug_line0
+     /tmp/ccggdnxw.s:671    .debug_str:0000000000000000 .LASF0
+     /tmp/ccggdnxw.s:715    .debug_str:0000000000000215 .LASF1
+     /tmp/ccggdnxw.s:705    .debug_str:00000000000001a4 .LASF2
+     /tmp/ccggdnxw.s:697    .debug_str:0000000000000164 .LASF4
+     /tmp/ccggdnxw.s:691    .debug_str:0000000000000132 .LASF3
+     /tmp/ccggdnxw.s:681    .debug_str:0000000000000048 .LASF5
+     /tmp/ccggdnxw.s:695    .debug_str:0000000000000151 .LASF6
+     /tmp/ccggdnxw.s:713    .debug_str:0000000000000202 .LASF7
+     /tmp/ccggdnxw.s:729    .debug_str:0000000000000286 .LASF8
+     /tmp/ccggdnxw.s:677    .debug_str:000000000000002b .LASF9
+     /tmp/ccggdnxw.s:679    .debug_str:0000000000000039 .LASF10
+     /tmp/ccggdnxw.s:719    .debug_str:0000000000000238 .LASF11
+     /tmp/ccggdnxw.s:683    .debug_str:000000000000004f .LASF12
+     /tmp/ccggdnxw.s:717    .debug_str:0000000000000228 .LASF13
+     /tmp/ccggdnxw.s:703    .debug_str:0000000000000198 .LASF14
+     /tmp/ccggdnxw.s:711    .debug_str:00000000000001ec .LASF15
+     /tmp/ccggdnxw.s:709    .debug_str:00000000000001d6 .LASF16
+     /tmp/ccggdnxw.s:701    .debug_str:0000000000000188 .LASF19
+     /tmp/ccggdnxw.s:687    .debug_str:0000000000000064 .LASF26
+     /tmp/ccggdnxw.s:735    .debug_str:00000000000002b9 .LASF17
+     /tmp/ccggdnxw.s:725    .debug_str:0000000000000269 .LASF18
+     /tmp/ccggdnxw.s:693    .debug_str:0000000000000144 .LASF27
+GAS LISTING /tmp/ccggdnxw.s 			page 4
+
+
+     /tmp/ccggdnxw.s:673    .debug_str:000000000000000d .LASF21
+     /tmp/ccggdnxw.s:675    .debug_str:0000000000000026 .LASF28
+     /tmp/ccggdnxw.s:721    .debug_str:0000000000000247 .LASF29
+     /tmp/ccggdnxw.s:733    .debug_str:00000000000002b3 .LASF20
+     /tmp/ccggdnxw.s:731    .debug_str:0000000000000296 .LASF22
+     /tmp/ccggdnxw.s:685    .debug_str:000000000000005f .LASF30
+     /tmp/ccggdnxw.s:699    .debug_str:000000000000016b .LASF31
+     /tmp/ccggdnxw.s:707    .debug_str:00000000000001b2 .LASF32
+     /tmp/ccggdnxw.s:13     .text:0000000000000000 .LFB0
+     /tmp/ccggdnxw.s:52     .text:0000000000000050 .LFE0
+     /tmp/ccggdnxw.s:66     .debug_info:0000000000000000 .Ldebug_info0
+
+UNDEFINED SYMBOLS
+HEAP_START_ADDR
+HEAP_END_ADDR
