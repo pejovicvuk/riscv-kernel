@@ -12,7 +12,7 @@ private:
     static FreeBlock* freeListHead;   // head of the free list
     MemoryAllocator() = delete;
 public:
-    static int init();
+    static void init();
     static void* alloc(size_t size);
     static int free(void* ptr);
 };
