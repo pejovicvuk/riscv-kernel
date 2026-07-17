@@ -15,6 +15,7 @@ public:
     static void init();
     static void* alloc(size_t size);
     static int free(void* ptr);
+    static void printFreeList();
 };
 
 #endif // MEMORYALLOCATOR_HPP
