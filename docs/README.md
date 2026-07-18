@@ -13,13 +13,16 @@ na koja treba znati odgovor.
 | 02 | [alokator memorije (zadatak 1)](02-alokator-memorije.md) | gotovo |
 | 03 | [trap, ecall i sistemski pozivi](03-trap-ecall-abi.md) | gotovo |
 | 04 | [prekidi, maskiranje i veliki bug](04-prekidi-maskiranje-bug.md) | gotovo |
-| 05 | [niti - kostur (TCB + Scheduler)](05-niti-kostur.md) | u izradi |
+| 05 | [niti - TCB, Scheduler, promena konteksta](05-niti-kostur.md) | gotovo |
 
 ## trenutno stanje projekta
 
-- zadatak 1 (alokator): gotov, dokazan kroz ceo ecall lanac
+- zadatak 1 (alokator): KOMPLETAN - mem_alloc i mem_free kroz ceo ecall lanac,
+  spajanje dokazano (heap se vraca u jedan blok, nula curenja)
 - prekidna rutina: cuva registre, panika na nepoznat uzrok, prekidi maskirani
-- zadatak 2 (niti): kostur napravljen (TCB, Scheduler), sledi promena konteksta
+- zadatak 2 (niti): promena konteksta RADI (test: ABABABABAB) - contextSwitch,
+  dispatch, bootstrap novih niti, threadWrapper, main kao nulta nit
+- sledece: thread_create/exit/dispatch kao sistemski pozivi + c api, pa u-mode
 - cilj: svih 30 poena (zadaci 1+2+3+4)
 
 ## kako radimo

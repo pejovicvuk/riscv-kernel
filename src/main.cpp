@@ -1,5 +1,6 @@
 #include "../h/print.hpp"
 #include "../h/memoryAllocator.hpp"
+#include "../h/tcb.hpp"
 
 extern "C" void trapHandler();
 
@@ -25,6 +26,10 @@ int main() {
     kputs(">> sstatus posle maske = "); kputhex(sstatus); kputs("\n");
 
     MemoryAllocator::init();
+
+    // main postaje "nulta" nit: dobija svoj tcb da ima gde da se zamrzne
+    // kad prvi put ustupi procesor (kontekst mu se popuni pri prvom dispatch-u)
+    TCB::running = TCB::createThread(nullptr, nullptr);
 
     userMain();    // privremeno: obican poziv funkcije; kasnije postaje
                    // telo prve niti koju pokrece jezgro

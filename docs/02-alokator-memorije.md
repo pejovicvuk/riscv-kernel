@@ -66,11 +66,30 @@ posle: [prev 512B slobodan]                    <- jedan blok, lista kraca za 2
   (`prev != nullptr && ...` - desna strana se ne izvrsava ako je leva false)
 - `free(nullptr)` vraca -1, ne puca
 
+## dvostruko zaokruzivanje kroz ceo lanac (nije bag!)
+
+kad zahtev ide kroz c api -> abi -> jezgro, zaokruzuje se DVAPUT:
+
+```
+mem_alloc(100):  c api: (100+63)/64 = 2 bloka    (korisnik dobija >= 128 KORISNIH bajtova)
+                 jezgro: alloc(2*64 = 128)
+                 alokator: 128+16 heder = 144 -> 192 (3 bloka zauzeto)
+```
+
+svaka alokacija zauzme jedan blok vise od "ociglednog" - jer heder zivi u samom
+bloku, pa da korisnik dobije punih n*64 korisnih bajtova, mora se zauzeti jos
+mesta za heder. to je inherentna cena intruzivnog dizajna; pdf trazi "najmanje
+size bajtova" - uslov ispunjen. dokaz iz stvarnog testa: p2-p1 = 0xC0 (192),
+p3-p2 = 0x140 (320).
+
 ## kako je dokazano
 
-ispis slobodne liste (`printFreeList`) posle svake operacije: adrese i velicine
-se poklapaju sa rucnim racunom (p1 = start+0x10, cepanje za 0x80, coalescing
-vraca sve u jedan blok).
+test u `userMain` kroz CEO lanac (c api -> ecall -> jezgro -> alokator):
+tri alokacije (100, 200, 50), oslobadjanje u redosledu p2, p1, p3 - pokriva
+grane "spoji sa sledecim" i "spoji sa oba". dokaz: posle free(p2)+free(p1)
+jedna rupa od 0x200 (= 0xC0 + 0x140), a posle free(p3) CEO heap opet jedan
+blok na pocetnoj adresi sa pocetnom velicinom (0x7ffa720) - nula curenja.
+mem_alloc I mem_free rade kroz ecall.
 
 ## pitanja za odbranu
 
