@@ -1,1 +1,4 @@
 build/
+kernel
+kernel.asm
+out.txt

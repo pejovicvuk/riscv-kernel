@@ -1,23 +1,24 @@
 #include "../h/print.hpp"
 
-// Send one character to the console controller.
+// posalji jedan znak kontroleru konzole (polling)
 void kputc(char c) {
-    // CONSOLE_STATUS is an address (a constant from hw.h). To read the
-    // byte living at that address, we reinterpret the integer address as
-    // a pointer-to-volatile-char and dereference it. 'volatile' tells the
-    // compiler the value can change outside our code (the hardware sets it),
-    // so it must actually re-read memory every loop pass, not cache it.
+    // CONSOLE_STATUS je adresa (konstanta iz hw.h); da procitamo bajt sa te
+    // adrese, kastujemo broj u pokazivac na volatile char pa dereferenciramo.
+    // volatile: vrednost menja hardver, kompajler mora stvarno da cita
+    // memoriju u svakom prolazu petlje, ne sme da kesira
     while ((*(volatile char*)CONSOLE_STATUS & (1 << 5)) == 0) {
-        // spin: bit 5 == 0 means "not ready to accept a char to send"
+        // bit 5 == 0 znaci "nisam spreman da primim znak za slanje"
     }
-    // Ready. Write the byte into the transmit-data register.
+    // spreman: upisi bajt u registar za slanje
     *(volatile char*)CONSOLE_TX_DATA = c;
 }
 
-// Convenience: print a whole string by sending char by char.
+// ispisi ceo string, znak po znak
 void kputs(const char* s) {
     while (*s) kputc(*s++);
 }
+
+// ispisi 64-bitni broj heksadecimalno (fiksno 16 cifara)
 void kputhex(uint64 n) {
     kputs("0x");
     for (int shift = 60; shift >= 0; shift -= 4) {

@@ -1,27 +1,38 @@
 #include "../h/print.hpp"
 #include "../h/memoryAllocator.hpp"
+
 extern "C" void trapHandler();
 
-void userMain();   // forward declaration: defined elsewhere (your test file)
+void userMain();   // definisana u test fajlu
 
 int main() {
     kputs(">> kernel: starting\n");
 
-    uint64 addr = (uint64)&trapHandler;              // adresa rutine kao broj
-    asm volatile("csrw stvec, %0" : : "r" (addr));   // upisi je u stvec
+    // stvec = adresa prekidne rutine: jedina kapija za ecall/izuzetke/prekide
+    uint64 addr = (uint64)&trapHandler;
+    asm volatile("csrw stvec, %0" : : "r" (addr));
 
-    MemoryAllocator::init();   // inicijalizuj slobodnu listu
+    // maskiraj prekide: sve radi u sistemskom rezimu, pa sstatus.sie=0
+    // znaci "ne prekidaj me" (zahtevi se pamte u sip, ali ne stizu).
+    // sret ovo ne kvari: sie<-spie, a spie je snimljena nula.
+    uint64 sstatus;
+    asm volatile("csrr %0, sstatus" : "=r"(sstatus));
+    sstatus &= ~(1UL << 1);
+    asm volatile("csrw sstatus, %0" : : "r"(sstatus));
 
-    userMain();    // THE CHEAT: calling it as a plain function for now.
-                   // In the real kernel this becomes "wrap userMain as the
-                   // body of the first thread and let the scheduler run it."
+    // dokaz da je maska stvarno upisana
+    asm volatile("csrr %0, sstatus" : "=r"(sstatus));
+    kputs(">> sstatus posle maske = "); kputhex(sstatus); kputs("\n");
+
+    MemoryAllocator::init();
+
+    userMain();    // privremeno: obican poziv funkcije; kasnije postaje
+                   // telo prve niti koju pokrece jezgro
 
     kputs(">> kernel: userMain returned, halting\n");
 
-    // Halt the emulator: writing the 32-bit value 0x5555 to physical
-    // address 0x100000 is qemu's "guest asked to power off" signal, so
-    // `make qemu` returns to your shell instead of hanging.
+    // upis 0x5555 na 0x100000 gasi emulator (regularan kraj procesa)
     *(volatile int*)0x100000 = 0x5555;
 
-    return 0;   // never really reached, but keeps the signature honest
+    return 0;
 }

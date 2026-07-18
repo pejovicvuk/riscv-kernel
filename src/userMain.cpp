@@ -1,4 +1,5 @@
-// src/userMain.cpp
+// privremeni test program; kad se uveze pravi app.lib sa testovima,
+// ovaj fajl se uklanja (duplikat simbola userMain)
 #include "../h/syscall_c.hpp"
 #include "../h/print.hpp"
 
