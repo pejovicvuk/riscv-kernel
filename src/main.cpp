@@ -1,9 +1,16 @@
 #include "../h/print.hpp"
+#include "../h/memoryAllocator.hpp"
+extern "C" void trapHandler();
 
 void userMain();   // forward declaration: defined elsewhere (your test file)
 
 int main() {
     kputs(">> kernel: starting\n");
+
+    uint64 addr = (uint64)&trapHandler;              // adresa rutine kao broj
+    asm volatile("csrw stvec, %0" : : "r" (addr));   // upisi je u stvec
+
+    MemoryAllocator::init();   // inicijalizuj slobodnu listu
 
     userMain();    // THE CHEAT: calling it as a plain function for now.
                    // In the real kernel this becomes "wrap userMain as the

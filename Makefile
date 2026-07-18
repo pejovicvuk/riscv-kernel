@@ -139,3 +139,7 @@ qemu-gdb: ${KERNEL_IMG} .gdbinit
 .PRECIOUS: %.o
 
 -include $(wildcard ${DIR_BUILD}/*.d)
+
+${DIR_BUILD}/%.o: %.S Makefile | ${DIR_BUILD}
+	@mkdir -p $(dir ${@})
+	${CC} -c ${CFLAGS} -o ${@} ${<}
