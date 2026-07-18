@@ -60,3 +60,43 @@ void MemoryAllocator::printFreeList() {
         curr = curr->next;
     }
 }
+int MemoryAllocator::free(void* ptr){
+    if (ptr == nullptr) return -1;
+    FreeBlock* curr = freeListHead;
+    FreeBlock* prev = nullptr;
+    FreeBlock* block = (FreeBlock*)((char*)ptr - sizeof(FreeBlock));
+    while(curr != nullptr && curr < block){
+        prev = curr;
+        curr = curr->next;
+    }
+    
+    bool mergePrev = (prev != nullptr) && ((char*)prev + prev->size == (char*)block);
+    bool mergeNext = (curr != nullptr) && ((char*)block + block->size == (char*)curr);
+
+    if (!mergePrev && !mergeNext) {
+        // neither merge
+        block->next = curr;
+        if (prev != nullptr) {
+            prev->next = block;
+        } else {
+            freeListHead = block;
+        }
+    } else if (mergePrev && !mergeNext) {
+        // merge with previous
+        prev->size += block->size;
+    } else if (!mergePrev && mergeNext) {
+        // merge with next
+        block->size += curr->size;
+        block->next = curr->next;
+        if (prev != nullptr) {
+            prev->next = block;
+        } else {
+            freeListHead = block;
+        }
+    } else {
+        // merge with both
+        prev->size += block->size + curr->size;
+        prev->next = curr->next;
+    }
+    return 0;
+}
