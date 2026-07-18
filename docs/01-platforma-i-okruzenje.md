@@ -44,6 +44,15 @@ hw.lib (pristup hardveru)      <- daje fakultet
    na fakultetskom linux-u (case-sensitive) pogresno slovo = build pada!
 2. **vs code nesnimljeni buffer**: kod "postoji" u editoru ali ne na disku.
    veruj `ls`/`cat`/`grep` u containeru, ne vs code prikazu.
+3. **make SAMO u containeru**: mac-ov homebrew toolchain ima noviji binutils
+   koji za csr instrukcije trazi `-march=rv64ima_zicsr`, pa build puca sa
+   "extension zicsr required". container (i fakultet) imaju stariji gcc kome
+   `rv64ima` podrazumeva csr. makefile ne diramo. kako prepoznati gresku:
+   temp putanja `/var/folders/...` u ispisu = mac toolchain, ne container.
+   posledica ako se make ipak pokrene na mac-u: u build/ ostane mesavina
+   mac i container .o fajlova, pa linker u containeru puca sa "unsupported
+   ISA subset" / "failed to merge target specific data". lek: `make clean && make`
+   u containeru.
 
 ## alati za debug (nas detektivski pribor)
 

@@ -17,3 +17,15 @@ void* mem_alloc(size_t size) {
 
     return (void*)code;
 }
+
+int mem_free(void* ptr) {
+    // abi poziv 0x02: a1 = pokazivac dobijen iz mem_alloc
+    register uint64 code asm("a0") = 0x02;
+    register uint64 p    asm("a1") = (uint64)ptr;
+    asm volatile("ecall"
+        : "=r"(code)
+        : "r"(code), "r"(p)
+        : "memory");
+
+    return (int)code;   // 0 = uspeh, negativno = greska
+}
