@@ -1,4 +1,4 @@
-#include "../h/syscall_c.hpp"
+#include "../h/syscall_c.h"
 #include "../lib/hw.h"
 
 void* mem_alloc(size_t size) {
@@ -62,4 +62,16 @@ int thread_exit() {
 void thread_dispatch() {
     register uint64 code asm("a0") = 0x13;
     asm volatile("ecall" : "=r"(code) : "r"(code) : "memory");
+}
+
+char getc() {
+    register uint64 code asm("a0") = 0x41;
+    asm volatile("ecall" : "=r"(code) : "r"(code) : "memory");
+    return (char)code;
+}
+
+void putc(char c) {
+    register uint64 code asm("a0") = 0x42;
+    register uint64 ch   asm("a1") = (uint64)c;
+    asm volatile("ecall" : "=r"(code) : "r"(code), "r"(ch) : "memory");
 }

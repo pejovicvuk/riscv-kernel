@@ -15,7 +15,8 @@ na koja treba znati odgovor.
 | 04 | [prekidi, maskiranje i veliki bug](04-prekidi-maskiranje-bug.md) | gotovo |
 | 05 | [niti - TCB, Scheduler, promena konteksta](05-niti-kostur.md) | gotovo |
 | 06 | [niti kroz sistemske pozive](06-sistemski-pozivi-niti.md) | gotovo |
-| 07 | [niti u korisnickom rezimu (u-mode)](07-u-mode-niti.md) | test u toku |
+| 07 | [niti u korisnickom rezimu (u-mode)](07-u-mode-niti.md) | gotovo |
+| 08 | [zvanicni testovi + polling konzola](08-zvanicni-testovi.md) | test u toku |
 
 ## trenutno stanje projekta
 

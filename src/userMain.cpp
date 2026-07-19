@@ -1,41 +1,70 @@
-// privremeni test program; kad se uveze pravi app.lib sa testovima,
-// ovaj fajl se uklanja (duplikat simbola userMain)
-#include "../h/syscall_c.hpp"
-#include "../h/print.hpp"
+// zvanicni test userMain (javni testovi 2024), prilagodjen trenutnom stanju:
+// - LEVEL zastavice: 1 i 2 gotovi, 3 i 4 jos nisu
+// - todo: vratiti include/pozive za cpp api (test 2) kad c++ api bude gotov
+// - todo: vratiti testove 3-6 kad stignu semafori i zadatak 4
+#include "../test/printing.hpp"
 
-// korisnicki kod od sada koristi ISKLJUCIVO c api (kao zvanicni testovi) -
-// nigde vise direktnog poziva u jezgro
+#define LEVEL_1_IMPLEMENTED 1
+#define LEVEL_2_IMPLEMENTED 1
+#define LEVEL_3_IMPLEMENTED 0
+#define LEVEL_4_IMPLEMENTED 0
 
-static volatile bool doneA = false;
-static volatile bool doneB = false;
-
-static void workerA(void*) {
-    // provera rezima (odkomentarisi jednu liniju): u u-modu privilegovana
-    // instrukcija MORA da izazove PANIC cause=0x2 - to je nas "test 7"
-    // asm volatile("csrr t6, sepc");
-    for (int i = 0; i < 5; i++) {
-        kputs("A");
-        thread_dispatch();
-    }
-    doneA = true;
-}
-
-static void workerB(void*) {
-    for (int i = 0; i < 5; i++) {
-        kputs("B");
-        thread_dispatch();
-    }
-    doneB = true;
-}
+#if LEVEL_2_IMPLEMENTED == 1
+// TEST 1 (zadatak 2, niti C API i sinhrona promena konteksta)
+#include "../test/Threads_C_API_test.hpp"
+// TEST 2 (zadatak 2., niti CPP API) - TODO: ceka c++ api
+// #include "../test/Threads_CPP_API_test.hpp"
+// TEST 7 (zadatak 2., testiranje da li se korisnicki kod izvrsava u korisnickom rezimu)
+#include "../test/System_Mode_test.hpp"
+#endif
 
 void userMain() {
-    thread_t a, b;
-    thread_create(&a, workerA, nullptr);
-    thread_create(&b, workerB, nullptr);
+    printString("Unesite broj testa? [1-7]\n");
+    int test = getc() - '0';
+    getc(); // enter posle broja
 
-    // main (nulta nit) vrti dispatch dok obe ne zavrse
-    while (!doneA || !doneB) {
-        thread_dispatch();
+    if ((test >= 1 && test <= 2) || test == 7) {
+        if (LEVEL_2_IMPLEMENTED == 0) {
+            printString("Nije navedeno da je zadatak 2 implementiran\n");
+            return;
+        }
     }
-    kputs("\nobe niti zavrsile\n");
+
+    if (test >= 3 && test <= 4) {
+        if (LEVEL_3_IMPLEMENTED == 0) {
+            printString("Nije navedeno da je zadatak 3 implementiran\n");
+            return;
+        }
+    }
+
+    if (test >= 5 && test <= 6) {
+        if (LEVEL_4_IMPLEMENTED == 0) {
+            printString("Nije navedeno da je zadatak 4 implementiran\n");
+            return;
+        }
+    }
+
+    switch (test) {
+        case 1:
+#if LEVEL_2_IMPLEMENTED == 1
+            Threads_C_API_test();
+            printString("TEST 1 (zadatak 2, niti C API i sinhrona promena konteksta)\n");
+#endif
+            break;
+        case 2:
+#if LEVEL_2_IMPLEMENTED == 1
+            // TODO: Threads_CPP_API_test(); - ceka c++ api
+            printString("TEST 2: c++ api jos nije implementiran\n");
+#endif
+            break;
+        case 7:
+#if LEVEL_2_IMPLEMENTED == 1
+            System_Mode_test();
+            printString("Test se nije uspesno zavrsio\n");
+            printString("TEST 7 (zadatak 2., testiranje da li se korisnicki kod izvrsava u korisnickom rezimu)\n");
+#endif
+            break;
+        default:
+            printString("Niste uneli odgovarajuci broj za test\n");
+    }
 }

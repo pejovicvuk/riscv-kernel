@@ -2,7 +2,7 @@
 #include "../h/scheduler.hpp"
 #include "../h/memoryAllocator.hpp"
 #include "../h/print.hpp"
-#include "../h/syscall_c.hpp"   // za thread_exit iz userWrapper-a (u-mode deo)
+#include "../h/syscall_c.h"   // za thread_exit iz userWrapper-a (u-mode deo)
 
 // asemblerska rutina iz contextSwitch.S
 extern "C" void contextSwitch(TCB::Context* oldCtx, TCB::Context* newCtx);

@@ -61,6 +61,15 @@ extern "C" uint64 handleTrap(uint64 a0, uint64 a1, uint64 a2, uint64 a3, uint64 
                 TCB::dispatch();
                 ret = 0;
                 break;
+            case 0x41:   // getc - PRIVREMENO polling (baferi + prekid = zadatak 4)
+                while ((*(volatile char*)CONSOLE_STATUS & CONSOLE_RX_STATUS_BIT) == 0) {}
+                ret = (uint64)(*(volatile char*)CONSOLE_RX_DATA);
+                break;
+            case 0x42:   // putc - PRIVREMENO polling (baferi + interna nit = zadatak 4)
+                while ((*(volatile char*)CONSOLE_STATUS & CONSOLE_TX_STATUS_BIT) == 0) {}
+                *(volatile char*)CONSOLE_TX_DATA = (char)a1;
+                ret = 0;
+                break;
             default:
                 ret = (uint64)-1;   // nepoznat kod sistemskog poziva
         }
