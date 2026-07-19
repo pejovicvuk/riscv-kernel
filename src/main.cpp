@@ -13,23 +13,24 @@ int main() {
     uint64 addr = (uint64)&trapHandler;
     asm volatile("csrw stvec, %0" : : "r" (addr));
 
-    // maskiraj prekide: sve radi u sistemskom rezimu, pa sstatus.sie=0
-    // znaci "ne prekidaj me" (zahtevi se pamte u sip, ali ne stizu).
-    // sret ovo ne kvari: sie<-spie, a spie je snimljena nula.
-    uint64 sstatus;
-    asm volatile("csrr %0, sstatus" : "=r"(sstatus));
-    sstatus &= ~(1UL << 1);
-    asm volatile("csrw sstatus, %0" : : "r"(sstatus));
+    // maskiraj prekide PO VRSTI, u sie registru: ssie (tajmer, bit 1) +
+    // seie (konzola, bit 9). sie vazi u OBA rezima - i u korisnickom,
+    // gde se sstatus.SIE ignorise. zahtevi se pamte u sip, ali ne stizu.
+    // u zadatku 4 se ovi biti samo ukljuce nazad.
+    uint64 sie;
+    asm volatile("csrr %0, sie" : "=r"(sie));
+    sie &= ~((1UL << 1) | (1UL << 9));
+    asm volatile("csrw sie, %0" : : "r"(sie));
 
     // dokaz da je maska stvarno upisana
-    asm volatile("csrr %0, sstatus" : "=r"(sstatus));
-    kputs(">> sstatus posle maske = "); kputhex(sstatus); kputs("\n");
+    asm volatile("csrr %0, sie" : "=r"(sie));
+    kputs(">> sie posle maske = "); kputhex(sie); kputs("\n");
 
     MemoryAllocator::init();
 
     // main postaje "nulta" nit: dobija svoj tcb da ima gde da se zamrzne
     // kad prvi put ustupi procesor (kontekst mu se popuni pri prvom dispatch-u)
-    TCB::running = TCB::createThread(nullptr, nullptr);
+    TCB::running = TCB::createThread(nullptr, nullptr, nullptr, true);   // nulta nit je sistemska
 
     userMain();    // privremeno: obican poziv funkcije; kasnije postaje
                    // telo prve niti koju pokrece jezgro

@@ -14,15 +14,19 @@ na koja treba znati odgovor.
 | 03 | [trap, ecall i sistemski pozivi](03-trap-ecall-abi.md) | gotovo |
 | 04 | [prekidi, maskiranje i veliki bug](04-prekidi-maskiranje-bug.md) | gotovo |
 | 05 | [niti - TCB, Scheduler, promena konteksta](05-niti-kostur.md) | gotovo |
+| 06 | [niti kroz sistemske pozive](06-sistemski-pozivi-niti.md) | gotovo |
+| 07 | [niti u korisnickom rezimu (u-mode)](07-u-mode-niti.md) | test u toku |
 
 ## trenutno stanje projekta
 
 - zadatak 1 (alokator): KOMPLETAN - mem_alloc i mem_free kroz ceo ecall lanac,
   spajanje dokazano (heap se vraca u jedan blok, nula curenja)
-- prekidna rutina: cuva registre, panika na nepoznat uzrok, prekidi maskirani
-- zadatak 2 (niti): promena konteksta RADI (test: ABABABABAB) - contextSwitch,
-  dispatch, bootstrap novih niti, threadWrapper, main kao nulta nit
-- sledece: thread_create/exit/dispatch kao sistemski pozivi + c api, pa u-mode
+- prekidna rutina: cuva registre, sepc/sstatus po niti (lokali), panika na
+  nepoznat uzrok; maska prekida u sie registru (vazi u oba rezima)
+- zadatak 2 (niti): thread_create/exit/dispatch kao sistemski pozivi (0x11-0x13),
+  c api, zombi ciscenje, tela korisnickih niti u U-MODU (test 7 spreman);
+  test ABABABABAB prosao kroz ceo syscall lanac
+- sledece: semafori (zadatak 3), pa tajmer/preotimanje i konzola (zadatak 4)
 - cilj: svih 30 poena (zadaci 1+2+3+4)
 
 ## kako radimo

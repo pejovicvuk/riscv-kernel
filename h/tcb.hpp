@@ -17,10 +17,13 @@ public:
         uint64 sp;
     };
 
-    // fabrika: napravi nit nad datom funkcijom (telo + argument);
-    // alocira tcb i stek, namesti pocetni kontekst i (ako ima telo)
-    // ubaci nit u red spremnih
-    static TCB* createThread(Body body, void* arg);
+    // fabrika: napravi nit nad datom funkcijom (telo + argument).
+    // stek NE alocira jezgro - stize spolja (c api ga uzima kroz mem_alloc,
+    // po abi potpisu poziva 0x11 iz pdf-a). namesti pocetni kontekst i
+    // (ako ima telo) ubaci nit u red spremnih.
+    // systemLevel: true samo za interne niti jezgra (telo ostaje u s-modu);
+    // korisnicke niti (preko syscall-a 0x11) idu sa false - telo u u-modu
+    static TCB* createThread(Body body, void* arg, void* stackSpace, bool systemLevel);
 
     // sinhrona promena konteksta: tekuca nit ustupa procesor sledecoj iz reda
     static void dispatch();
@@ -37,17 +40,30 @@ public:
     void operator delete(void* ptr);
 
 private:
-    TCB(Body body, void* arg, uint64* stack);
+    TCB(Body body, void* arg, uint64* stack, bool systemLevel);
 
-    // omotac tela niti: prva funkcija u zivotu svake niti; pozove telo,
-    // a kad se telo zavrsi, uredno "sahrani" nit (finished + dispatch)
+    // omotac tela niti, s-mode deo: prva funkcija u zivotu svake niti.
+    // internim nitima jezgra odmah pozove telo; korisnicke niti SPUSTA
+    // u korisnicki rezim (sepc=userWrapper, spp=0, sret)
     static void threadWrapper();
+
+    // omotac tela niti, u-mode deo: izvrsava se u korisnickom rezimu -
+    // pozove telo, pa se jedinim dozvoljenim putem (ecall: thread_exit)
+    // vrati u jezgro
+    static void userWrapper();
+
+    // zombi mehanizam: gotova nit ne sme da oslobodi stek NA KOM STOJI,
+    // pa je samo zabelezimo; pocisti je prva sledeca probudjena nit
+    // (koja stoji na svom, bezbednom steku)
+    static TCB* zombie;
+    static void reapZombie();
 
     Body body;        // funkcija koju nit izvrsava
     void* arg;        // argument te funkcije
     uint64* stack;    // pocetak alociranog prostora za stek (za kasnije oslobadjanje)
     Context context;  // zamrznuta slika (vazi samo dok nit ne radi)
     bool finished;    // da li je nit zavrsila
+    bool systemLevel; // true = interna nit jezgra (telo radi u s-modu)
     TCB* next;        // ulancavanje u Scheduler-ov red (intruzivno, bez alokacija)
 
     friend class Scheduler;   // Scheduler sme da koristi next za svoj red

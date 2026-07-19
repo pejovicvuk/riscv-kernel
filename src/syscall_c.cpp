@@ -29,3 +29,37 @@ int mem_free(void* ptr) {
 
     return (int)code;   // 0 = uspeh, negativno = greska
 }
+
+int thread_create(thread_t* handle, void (*start_routine)(void*), void* arg) {
+    if (!handle || !start_routine) return -1;
+
+    // pdf, abi poziv 0x11: stek niti alocira OVAJ sloj (kroz mem_alloc,
+    // dakle jos jedan ecall), pa ga prosledjuje jezgru kao 4. argument
+    void* stackSpace = mem_alloc(DEFAULT_STACK_SIZE);
+    if (!stackSpace) return -2;
+
+    register uint64 code asm("a0") = 0x11;
+    register uint64 h    asm("a1") = (uint64)handle;
+    register uint64 rt   asm("a2") = (uint64)start_routine;
+    register uint64 ag   asm("a3") = (uint64)arg;
+    register uint64 st   asm("a4") = (uint64)stackSpace;
+    asm volatile("ecall"
+        : "=r"(code)
+        : "r"(code), "r"(h), "r"(rt), "r"(ag), "r"(st)
+        : "memory");
+
+    int result = (int)code;
+    if (result != 0) mem_free(stackSpace);   // nit nije nastala - vrati stek
+    return result;
+}
+
+int thread_exit() {
+    register uint64 code asm("a0") = 0x12;
+    asm volatile("ecall" : "=r"(code) : "r"(code) : "memory");
+    return (int)code;   // dovde stize samo u slucaju neuspeha
+}
+
+void thread_dispatch() {
+    register uint64 code asm("a0") = 0x13;
+    asm volatile("ecall" : "=r"(code) : "r"(code) : "memory");
+}

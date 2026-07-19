@@ -2,30 +2,40 @@
 // ovaj fajl se uklanja (duplikat simbola userMain)
 #include "../h/syscall_c.hpp"
 #include "../h/print.hpp"
-#include "../h/tcb.hpp"
 
-// dve niti koje se smenjuju: svaka ispise svoje slovo pa ustupi procesor
+// korisnicki kod od sada koristi ISKLJUCIVO c api (kao zvanicni testovi) -
+// nigde vise direktnog poziva u jezgro
+
+static volatile bool doneA = false;
+static volatile bool doneB = false;
+
 static void workerA(void*) {
+    // provera rezima (odkomentarisi jednu liniju): u u-modu privilegovana
+    // instrukcija MORA da izazove PANIC cause=0x2 - to je nas "test 7"
+    // asm volatile("csrr t6, sepc");
     for (int i = 0; i < 5; i++) {
         kputs("A");
-        TCB::dispatch();
+        thread_dispatch();
     }
+    doneA = true;
 }
 
 static void workerB(void*) {
     for (int i = 0; i < 5; i++) {
         kputs("B");
-        TCB::dispatch();
+        thread_dispatch();
     }
+    doneB = true;
 }
 
 void userMain() {
-    TCB* a = TCB::createThread(workerA, nullptr);
-    TCB* b = TCB::createThread(workerB, nullptr);
+    thread_t a, b;
+    thread_create(&a, workerA, nullptr);
+    thread_create(&b, workerB, nullptr);
 
     // main (nulta nit) vrti dispatch dok obe ne zavrse
-    while (!a->isFinished() || !b->isFinished()) {
-        TCB::dispatch();
+    while (!doneA || !doneB) {
+        thread_dispatch();
     }
     kputs("\nobe niti zavrsile\n");
 }
