@@ -6,7 +6,7 @@
 
 #define LEVEL_1_IMPLEMENTED 1
 #define LEVEL_2_IMPLEMENTED 1
-#define LEVEL_3_IMPLEMENTED 0
+#define LEVEL_3_IMPLEMENTED 1
 #define LEVEL_4_IMPLEMENTED 0
 
 #if LEVEL_2_IMPLEMENTED == 1
@@ -16,6 +16,13 @@
 // #include "../test/Threads_CPP_API_test.hpp"
 // TEST 7 (zadatak 2., testiranje da li se korisnicki kod izvrsava u korisnickom rezimu)
 #include "../test/System_Mode_test.hpp"
+#endif
+
+#if LEVEL_3_IMPLEMENTED == 1
+// TEST 3 (zadatak 3., kompletan C API sa semaforima, sinhrona promena konteksta)
+#include "../test/ConsumerProducer_C_API_test.hpp"
+// TEST 4 (zadatak 3., CPP Sync API) - TODO: ceka c++ api
+// #include "../test/ConsumerProducer_CPP_Sync_API_test.hpp"
 #endif
 
 void userMain() {
@@ -55,6 +62,18 @@ void userMain() {
 #if LEVEL_2_IMPLEMENTED == 1
             // TODO: Threads_CPP_API_test(); - ceka c++ api
             printString("TEST 2: c++ api jos nije implementiran\n");
+#endif
+            break;
+        case 3:
+#if LEVEL_3_IMPLEMENTED == 1
+            producerConsumer_C_API();
+            printString("TEST 3 (zadatak 3., kompletan C API sa semaforima, sinhrona promena konteksta)\n");
+#endif
+            break;
+        case 4:
+#if LEVEL_3_IMPLEMENTED == 1
+            // TODO: producerConsumer_CPP_Sync_API(); - ceka c++ api
+            printString("TEST 4: c++ api jos nije implementiran\n");
 #endif
             break;
         case 7:

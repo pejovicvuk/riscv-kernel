@@ -21,7 +21,8 @@ void TCB::operator delete(void* ptr) {
 TCB::TCB(Body body, void* arg, uint64* stack, bool systemLevel)
     : body(body), arg(arg), stack(stack),
       context({0, 0}),
-      finished(false), systemLevel(systemLevel), next(nullptr)
+      finished(false), systemLevel(systemLevel), next(nullptr),
+      blockResult(0), pendingN(1)
 {}
 
 // pocisti nit koja je umrla pre naseg budjenja (njen stek i tcb);
@@ -89,15 +90,13 @@ TCB* TCB::createThread(Body body, void* arg, void* stackSpace, bool systemLevel)
     return tcb;
 }
 
-// sinhrona promena konteksta: tekuca nit ustupa procesor
-void TCB::dispatch() {
+// prebaci se na sledecu spremnu nit. PRETPOSTAVKA: tekuca nit je vec
+// zbrinuta (red spremnih / red semafora / zombi) - ovde se samo menja
+void TCB::switchToNext() {
     TCB* old = running;
-    if (!old->finished) Scheduler::put(old);
-    else zombie = old;   // jos stojimo na njegovom steku - ciscenje kasnije!
-
     TCB* next = Scheduler::get();
     if (!next) {
-        // nema nijedne spremne niti, a tekuca je gotova: sistem nema sta da radi
+        // nema nijedne spremne niti: sistem nema sta da radi (moguc i deadlock)
         kputs("PANIC: nema spremnih niti\n");
         *(volatile int*)0x100000 = 0x5555;
     }
@@ -106,4 +105,11 @@ void TCB::dispatch() {
     contextSwitch(&old->context, &running->context);
     // budjenje: sad smo na steku probudjene niti - bezbedno pocisti zombija
     reapZombie();
+}
+
+// sinhrona promena konteksta: tekuca nit ustupa procesor
+void TCB::dispatch() {
+    if (!running->finished) Scheduler::put(running);
+    else zombie = running;   // jos stojimo na njegovom steku - ciscenje kasnije!
+    switchToNext();
 }

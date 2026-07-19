@@ -2,6 +2,7 @@
 #include "../h/print.hpp"
 #include "../h/memoryAllocator.hpp"
 #include "../h/tcb.hpp"
+#include "../h/scb.hpp"
 
 // zajednicki c deo prekidne rutine: cita scause i grana se na obradu.
 // a0..a4 parametri se poklapaju sa registrima a0..a4 u trenutku trapa
@@ -60,6 +61,31 @@ extern "C" uint64 handleTrap(uint64 a0, uint64 a1, uint64 a2, uint64 a3, uint64 
             case 0x13:   // thread_dispatch - nit dobrovoljno ustupa procesor
                 TCB::dispatch();
                 ret = 0;
+                break;
+            case 0x21: { // sem_open(handle, init)
+                SCB* sem = SCB::createSemaphore((unsigned)a2);
+                if (sem) { *(SCB**)a1 = sem; ret = 0; }
+                else     { ret = (uint64)-1; }
+                break;
+            }
+            case 0x22: { // sem_close - deblokira sve cekace (sa greskom), pa se brise
+                SCB* sem = (SCB*)a1;
+                if (!sem) { ret = (uint64)-1; break; }
+                ret = (uint64)sem->close();
+                delete sem;
+                break;
+            }
+            case 0x23:   // sem_wait = wait(1); moze da blokira nit bas ovde
+                ret = a1 ? (uint64)((SCB*)a1)->wait(1) : (uint64)-1;
+                break;
+            case 0x24:   // sem_signal = signal(1)
+                ret = a1 ? (uint64)((SCB*)a1)->signal(1) : (uint64)-1;
+                break;
+            case 0x25:   // sem_wait_n(id, n)
+                ret = a1 ? (uint64)((SCB*)a1)->wait((unsigned)a2) : (uint64)-1;
+                break;
+            case 0x26:   // sem_signal_n(id, n)
+                ret = a1 ? (uint64)((SCB*)a1)->signal((unsigned)a2) : (uint64)-1;
                 break;
             case 0x41:   // getc - PRIVREMENO polling (baferi + prekid = zadatak 4)
                 while ((*(volatile char*)CONSOLE_STATUS & CONSOLE_RX_STATUS_BIT) == 0) {}

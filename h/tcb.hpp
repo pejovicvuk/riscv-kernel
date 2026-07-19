@@ -58,15 +58,25 @@ private:
     static TCB* zombie;
     static void reapZombie();
 
+    // prebaci se na sledecu spremnu nit BEZ zbrinjavanja tekuce -
+    // pozivalac je vec smestio tekucu tamo gde joj je mesto
+    // (red spremnih / red semafora / zombi)
+    static void switchToNext();
+
     Body body;        // funkcija koju nit izvrsava
     void* arg;        // argument te funkcije
     uint64* stack;    // pocetak alociranog prostora za stek (za kasnije oslobadjanje)
     Context context;  // zamrznuta slika (vazi samo dok nit ne radi)
     bool finished;    // da li je nit zavrsila
     bool systemLevel; // true = interna nit jezgra (telo radi u s-modu)
-    TCB* next;        // ulancavanje u Scheduler-ov red (intruzivno, bez alokacija)
+    TCB* next;        // ulancavanje u TACNO JEDAN red u datom trenutku:
+                      // ili Scheduler (spremna) ili red jednog semafora
+                      // (blokirana) - nikad oba, pa je jedan pokazivac dovoljan
+    int blockResult;  // ishod cekanja na semaforu: 0 ok, negativno = zatvoren
+    uint64 pendingN;  // koliko jedinica semafora nit ceka (sem_wait_n)
 
     friend class Scheduler;   // Scheduler sme da koristi next za svoj red
+    friend class SCB;         // semafor blokira/ulancava niti u svoj red
 };
 
 #endif // _tcb_hpp_
