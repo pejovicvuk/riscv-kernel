@@ -17,7 +17,7 @@ na koja treba znati odgovor.
 | 06 | [niti kroz sistemske pozive](06-sistemski-pozivi-niti.md) | gotovo |
 | 07 | [niti u korisnickom rezimu (u-mode)](07-u-mode-niti.md) | gotovo |
 | 08 | [zvanicni testovi + polling konzola](08-zvanicni-testovi.md) | gotovo |
-| 09 | [semafori (zadatak 3)](09-semafori.md) | test u toku |
+| 09 | [semafori (zadatak 3)](09-semafori.md) | gotovo |
 
 ## trenutno stanje projekta
 
@@ -28,8 +28,11 @@ na koja treba znati odgovor.
 - zadatak 2 (niti): KOMPLETAN - ZVANICNI TESTOVI 1 i 7 PROLAZE (2026-07-20).
   syscalls 0x11-0x13, c api, u-mode tela, zombi ciscenje, t-registri prezivljavaju
   dispatch (test 1: "C: t1=7"), polling putc/getc za meni testova
-- sledece: semafori (zadatak 3) -> testovi 3 i 4, pa c++ api -> test 2,
-  pa tajmer/preotimanje i konzola (zadatak 4) -> testovi 5 i 6
+- zadatak 3 (semafori): ZVANICNI TEST 3 PROLAZI (2026-07-19); test 1 regresija ok.
+  scb, pozivi 0x21-0x26, trece stanje niti (blokirana), switchToNext refaktor,
+  globalni new/delete za korisnicki sloj (newdelete.cpp)
+- sledece: c++ api (Thread, Semaphore...) -> testovi 2 i 4, pa zadatak 4
+  (tajmer/preotimanje, time_sleep, prava konzola) -> testovi 5 i 6
 - cilj: svih 30 poena (zadaci 1+2+3+4)
 
 ## kako radimo
