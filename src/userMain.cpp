@@ -1,7 +1,6 @@
 // zvanicni test userMain (javni testovi 2024), prilagodjen trenutnom stanju:
-// - LEVEL zastavice: 1 i 2 gotovi, 3 i 4 jos nisu
-// - todo: vratiti include/pozive za cpp api (test 2) kad c++ api bude gotov
-// - todo: vratiti testove 3-6 kad stignu semafori i zadatak 4
+// - LEVEL zastavice: 1, 2 i 3 gotovi (c i c++ api), 4 jos nije
+// - todo: vratiti testove 5 i 6 kad stigne zadatak 4
 #include "../test/printing.hpp"
 
 #define LEVEL_1_IMPLEMENTED 1
@@ -12,8 +11,8 @@
 #if LEVEL_2_IMPLEMENTED == 1
 // TEST 1 (zadatak 2, niti C API i sinhrona promena konteksta)
 #include "../test/Threads_C_API_test.hpp"
-// TEST 2 (zadatak 2., niti CPP API) - TODO: ceka c++ api
-// #include "../test/Threads_CPP_API_test.hpp"
+// TEST 2 (zadatak 2., niti CPP API)
+#include "../test/Threads_CPP_API_test.hpp"
 // TEST 7 (zadatak 2., testiranje da li se korisnicki kod izvrsava u korisnickom rezimu)
 #include "../test/System_Mode_test.hpp"
 #endif
@@ -21,8 +20,8 @@
 #if LEVEL_3_IMPLEMENTED == 1
 // TEST 3 (zadatak 3., kompletan C API sa semaforima, sinhrona promena konteksta)
 #include "../test/ConsumerProducer_C_API_test.hpp"
-// TEST 4 (zadatak 3., CPP Sync API) - TODO: ceka c++ api
-// #include "../test/ConsumerProducer_CPP_Sync_API_test.hpp"
+// TEST 4 (zadatak 3., CPP Sync API)
+#include "../test/ConsumerProducer_CPP_Sync_API_test.hpp"
 #endif
 
 void userMain() {
@@ -60,8 +59,8 @@ void userMain() {
             break;
         case 2:
 #if LEVEL_2_IMPLEMENTED == 1
-            // TODO: Threads_CPP_API_test(); - ceka c++ api
-            printString("TEST 2: c++ api jos nije implementiran\n");
+            Threads_CPP_API_test();
+            printString("TEST 2 (zadatak 2., niti CPP API)\n");
 #endif
             break;
         case 3:
@@ -72,8 +71,8 @@ void userMain() {
             break;
         case 4:
 #if LEVEL_3_IMPLEMENTED == 1
-            // TODO: producerConsumer_CPP_Sync_API(); - ceka c++ api
-            printString("TEST 4: c++ api jos nije implementiran\n");
+            producerConsumer_CPP_Sync_API();
+            printString("TEST 4 (zadatak 3., CPP Sync API)\n");
 #endif
             break;
         case 7:
