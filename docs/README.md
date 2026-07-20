@@ -18,6 +18,7 @@ na koja treba znati odgovor.
 | 07 | [niti u korisnickom rezimu (u-mode)](07-u-mode-niti.md) | gotovo |
 | 08 | [zvanicni testovi + polling konzola](08-zvanicni-testovi.md) | gotovo |
 | 09 | [semafori (zadatak 3)](09-semafori.md) | gotovo |
+| 10 | [vodic kroz flowove (citanje koda)](10-vodic-kroz-flowove.md) | gotovo |
 
 ## trenutno stanje projekta
 
@@ -31,9 +32,14 @@ na koja treba znati odgovor.
 - zadatak 3 (semafori): ZVANICNI TEST 3 PROLAZI (2026-07-19); test 1 regresija ok.
   scb, pozivi 0x21-0x26, trece stanje niti (blokirana), switchToNext refaktor,
   globalni new/delete za korisnicki sloj (newdelete.cpp)
-- sledece: c++ api (Thread, Semaphore...) -> testovi 2 i 4, pa zadatak 4
-  (tajmer/preotimanje, time_sleep, prava konzola) -> testovi 5 i 6
-- cilj: svih 30 poena (zadaci 1+2+3+4)
+- c++ api (syscall_cpp.hpp/.cpp): GOTOV - ZVANICNI TESTOVI 2 i 4 PROLAZE
+  (2026-07-20). Thread/Semaphore/PeriodicThread/Console kao tanki omotaci;
+  runWrapper bira body ili run() (pdf pravilo); sleep i PeriodicThread su
+  stub do zadatka 4. TIME JE SEKCIJA OD 20 POENA KOMPLETNO OVERENA
+  (testovi 1, 2, 3, 4 i 7 svi prolaze)
+- u toku: rezim potpunog razumevanja - citanje koda po lekciji 10
+- sledece (odluka studenta): zadatak 4 (tajmer/preotimanje, time_sleep,
+  prava konzola -> testovi 5 i 6) ili priprema odbrane
 
 ## kako radimo
 
