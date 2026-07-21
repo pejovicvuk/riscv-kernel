@@ -85,7 +85,7 @@ zasto se cuvaju bas s0-s11 (+ra +sp)?
 - s registre pozvana funkcija MORA da ocuva - a contextSwitch pusta DRUGU nit
   da ih gazi - zato ih rucno spustamo na stek niti pre zamrzavanja
 - kod ASINHRONOG preotimanja (zadatak 4) prekid pada bilo gde -> tamo se mora
-  cuvati SVE (to vec radi trap.S za caller-saved deo)
+  cuvati SVE (to vec radi supervisorTrap.S za caller-saved deo)
 
 ## bootstrap - kako se radja nit (najveca mozgalica)
 
@@ -123,7 +123,7 @@ razlika je u jednoj reci: KO ODLUCUJE.
   dovoljno rucno cuvati s0-s11 + ra + sp. ovo sad imamo.
 - **asinhrona**: tajmer/prekid skida nit USRED BILO KOJE instrukcije, bez
   najave - nit mozda drzi poluizracunat rezultat u t3. mora se cuvati SVE:
-  trap.S cuva t/a/ra na ulasku, contextSwitch doda s0-s11 - zajedno kompletan
+  supervisorTrap.S cuva t/a/ra na ulasku, contextSwitch doda s0-s11 - zajedno kompletan
   kontekst. ovo stize u zadatku 4 (preotimanje).
 
 analogija: sinhrono = sam predas kasu kolegi (zapise se samo ono sto se

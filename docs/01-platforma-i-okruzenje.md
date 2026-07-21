@@ -31,7 +31,7 @@ hw.lib (pristup hardveru)      <- daje fakultet
 
 ## dve infrastrukturne zamke (vec su nas ujedale)
 
-1. **mac mount je case-insensitive**: `trap.S` i `trap.s` su isti fajl!
+1. **mac mount je case-insensitive**: `supervisorTrap.S` i `trap.s` su isti fajl!
    gnu make je pravio `.s` medjufajl iz `.S` i pri ciscenju gazio original.
    resenje: pravilo u Makefile koje pravi `.o` direktno iz `.S` (uvlacenje mora biti tab):
    ```
@@ -64,7 +64,7 @@ hw.lib (pristup hardveru)      <- daje fakultet
 - `make qemu 2>&1 | tee /work/out.txt` - snimi ceo izlaz kad terminal poplavi
 - `kputs`/`kputhex` iz `h/print.hpp` - direktan polling ispis, radi i usred
   prekidne rutine (debug alat, ne deo resenja)
-- panika u `handleTrap`: nepoznat uzrok ispisuje `cause` + `sepc` i gasi emulator -
+- panika u `handleSupervisorTrap`: nepoznat uzrok ispisuje `cause` + `sepc` i gasi emulator -
   nikad vise tiha beskonacna petlja
 
 ## pitanja za odbranu

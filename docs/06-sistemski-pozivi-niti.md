@@ -1,6 +1,6 @@
 # 06 - niti kroz sistemske pozive (thread_create/exit/dispatch)
 
-fajlovi: `src/trapHandlers.cpp`, `src/syscall_c.cpp`, `h/syscall_c.hpp`,
+fajlovi: `src/riscv.cpp`, `src/syscall_c.cpp`, `h/syscall_c.hpp`,
 `src/tcb.cpp`, `h/tcb.hpp`
 
 ## projektne odluke (moje, obrazlozene)
@@ -42,13 +42,13 @@ jezgro upise rucku kroz `*(TCB**)a1 = tcb`.
 [c api]      mem_alloc(DEFAULT_STACK_SIZE)  -> ecall 0x01 -> stek za novu nit
 [c api]      a0=0x11, a1=&a, a2=workerA, a3=0, a4=stek -> ecall
 [hardver]    sepc/scause/sstatus, skok na stvec
-[trap.S]     sacuvaj 15 registara na stek POZIVAOCA
-[handleTrap] case 0x11: TCB::createThread(workerA, 0, stek)
+[supervisorTrap.S]     sacuvaj 15 registara na stek POZIVAOCA
+[handleSupervisorTrap] case 0x11: TCB::createThread(workerA, 0, stek)
 [jezgro]     new TCB (operator new -> MemoryAllocator, BEZ ecall-a!)
              falsifikat: ra=threadWrapper, sp=vrh steka-96 (12 nula)
              Scheduler::put -> nit ceka u redu (jos NIJE dobila procesor!)
-[handleTrap] *(TCB**)a1 = tcb  (rucka korisniku), ret=0
-[trap.S]     vrati registre, sret
+[handleSupervisorTrap] *(TCB**)a1 = tcb  (rucka korisniku), ret=0
+[supervisorTrap.S]     vrati registre, sret
 [c api]      vrati 0 korisniku. nova nit ce PRVI PUT raditi tek kad je
              neciji dispatch izvuce iz reda.
 ```
@@ -60,12 +60,12 @@ trapa. a sepc je hardverski globalan - jedan po procesoru:
 
 ```
 nit A: ecall             sepc <- A-jina adresa
-  handleTrap -> dispatch -> A parkirana USRED handleTrap-a
+  handleSupervisorTrap -> dispatch -> A parkirana USRED handleSupervisorTrap-a
   nit B radi, uradi svoj ecall    sepc <- B-jina adresa   !!! prepisan
-  A se budi, dovrsava svoj handleTrap: sepc+=4; sret -> ODLETI NA B-JINU ADRESU
+  A se budi, dovrsava svoj handleSupervisorTrap: sepc+=4; sret -> ODLETI NA B-JINU ADRESU
 ```
 
-resenje (u handleTrap): sepc i sstatus se NA ULAZU prepisu u lokalne
+resenje (u handleSupervisorTrap): sepc i sstatus se NA ULAZU prepisu u lokalne
 promenljive - a lokalne zive na steku TE niti, pa se parkiraju i bude s njom.
 pred povratak se upisu nazad u csr registre: svako se vraca sa svojim.
 
@@ -125,14 +125,14 @@ case 0x13:   // thread_dispatch
 ```
 
 thread_exit = "obelezi kraj + ustupi procesor": ista mehanika kao smrt kroz
-wrapper. nit parkirana usred handleTrap-a, finished, niko je vise ne budi,
+wrapper. nit parkirana usred handleSupervisorTrap-a, finished, niko je vise ne budi,
 prva sledeca probudjena nit je pocisti kao zombija.
 
 ## pitanja za odbranu
 
 1. ko alocira stek nove niti i zasto (pdf abi 0x11)? koliko ecall-ova ima jedan thread_create?
 2. sta je thread_t i zasto je "neproziran"?
-3. zasto sepc mora u lokalnu promenljivu na ulazu u handleTrap? sta bi puklo bez toga?
+3. zasto sepc mora u lokalnu promenljivu na ulazu u handleSupervisorTrap? sta bi puklo bez toga?
 4. zasto gotova nit ne sme sama da oslobodi svoj stek? ko ga oslobadja i kada?
 5. nova nit je kreirana - kada ce PRVI put dobiti procesor?
-6. zasto se u handleTrap sepc uvecava pre switch-a, a upisuje u csr tek na kraju?
+6. zasto se u handleSupervisorTrap sepc uvecava pre switch-a, a upisuje u csr tek na kraju?

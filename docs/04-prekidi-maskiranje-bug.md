@@ -54,7 +54,7 @@ rekonstrukcija (prati registar `ra`):
 userMain --call--> mem_alloc              ra = povratak u userMain
                    mem_alloc je LEAF funkcija -> njen prevod NE cuva ra na steku!
 ecall -> stari trapHandler:
-    call handleTrap                       !!! call upise u ra adresu SLEDECE
+    call handleSupervisorTrap                       !!! call upise u ra adresu SLEDECE
                                           instrukcije = adresu sret-a
     sret -> nazad u mem_alloc             ali ra je i dalje IZGAZEN
 mem_alloc: ret                            skok na ra = na SRET u trapHandler-u!
@@ -71,8 +71,8 @@ handler za c=2 ne pomera sepc -> ista adresa -> a konzola vec ceka -> 9,2,9,2...
 1. **prekidna rutina MORA da sacuva caller-saved registre** (ra, t0-t6, a1-a7):
    c funkcija ih po konvenciji sme pokvariti, a prekinuti kod (koga je prekid
    PRESEKAO usred posla, nije nikog "pozvao") racuna da su netaknuti.
-   zato trap.S sada spusta 15 registara na stek pre call-a i vraca ih posle.
-   (s0-s11 ne: njih cuva sam handleTrap svojim prologom/epilogom, po konvenciji.)
+   zato supervisorTrap.S sada spusta 15 registara na stek pre call-a i vraca ih posle.
+   (s0-s11 ne: njih cuva sam handleSupervisorTrap svojim prologom/epilogom, po konvenciji.)
 2. **privilegovane instrukcije stite jezgro**: sret/csr iz korisnickog rezima =
    ilegalna instrukcija. da nije tako, korisnicki program bi mogao sam sebe da
    prebaci u sistemski rezim i zastita ne bi postojala.

@@ -5,8 +5,9 @@
 
 class TCB;
 
-// scb (semaphore control block) = semafor u jezgru: brojac slobodnih "mesta"
-// + fifo red niti koje cekaju. iza c api rucke sem_t krije se ovaj tip.
+// scb (semaphore control block) = semafor u jezgru: brojac slobodnih
+// "mesta" + fifo red niti koje cekaju. iza c api rucke sem_t krije se
+// ovaj tip.
 // konvencija (projektna odluka): value nikad ne ide u minus - cekaci se vide
 // po redu, ne po znaku brojaca.
 class SCB {

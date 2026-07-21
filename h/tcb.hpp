@@ -28,6 +28,10 @@ public:
     // sinhrona promena konteksta: tekuca nit ustupa procesor sledecoj iz reda
     static void dispatch();
 
+    // otkucaj tajmera: naplati jedan otkucaj tekucoj niti;
+    // vraca true kad je kvantum istekao (vreme za preotimanje)
+    static bool tick();
+
     bool isFinished() const { return finished; }
     void setFinished(bool f) { finished = f; }
 
@@ -35,7 +39,8 @@ public:
     static TCB* running;
 
     // new/delete za tcb idu direktno na MemoryAllocator (jezgro ne sme
-    // da zove sopstveni sistemski poziv mem_alloc kroz ecall)
+    // da zove sopstveni sistemski poziv mem_alloc kroz ecall);
+    // isti obrazac ima i SCB
     void* operator new(size_t size);
     void operator delete(void* ptr);
 
@@ -63,12 +68,18 @@ private:
     // (red spremnih / red semafora / zombi)
     static void switchToNext();
 
+    // potroseni deo kvantuma TEKUCE niti (u otkucajima tajmera);
+    // jedna promenljiva je dovoljna - odnosi se uvek samo na running,
+    // a resetuje se na JEDNOM mestu: u switchToNext, pri izboru nove niti
+    static uint64 usedTicks;
+
     Body body;        // funkcija koju nit izvrsava
     void* arg;        // argument te funkcije
     uint64* stack;    // pocetak alociranog prostora za stek (za kasnije oslobadjanje)
     Context context;  // zamrznuta slika (vazi samo dok nit ne radi)
     bool finished;    // da li je nit zavrsila
     bool systemLevel; // true = interna nit jezgra (telo radi u s-modu)
+    time_t timeSlice; // kvantum OVE niti (podrazumevano DEFAULT_TIME_SLICE)
     TCB* next;        // ulancavanje u TACNO JEDAN red u datom trenutku:
                       // ili Scheduler (spremna) ili red jednog semafora
                       // (blokirana) - nikad oba, pa je jedan pokazivac dovoljan

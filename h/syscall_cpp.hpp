@@ -7,7 +7,7 @@
 // tanki omotaci oko c api-ja: svaka klasa samo prosledjuje pozive
 // odgovarajucem sistemskom pozivu preko svoje rucke (myHandle).
 
-// globalni new/delete su preusmereni na mem_alloc/mem_free (src/newdelete.cpp)
+// globalni new/delete su preusmereni na mem_alloc/mem_free (src/_new.cpp)
 void* operator new(size_t size);
 void  operator delete(void* ptr) noexcept;
 

@@ -2,13 +2,15 @@
 #include "../h/scheduler.hpp"
 #include "../h/memoryAllocator.hpp"
 #include "../h/print.hpp"
+#include "../h/riscv.hpp"
 #include "../h/syscall_c.h"   // za thread_exit iz userWrapper-a (u-mode deo)
 
 // asemblerska rutina iz contextSwitch.S
 extern "C" void contextSwitch(TCB::Context* oldCtx, TCB::Context* newCtx);
 
-TCB* TCB::running = nullptr;
-TCB* TCB::zombie  = nullptr;
+TCB* TCB::running   = nullptr;
+TCB* TCB::zombie    = nullptr;
+uint64 TCB::usedTicks = 0;
 
 // new/delete za tcb: direktno na alokator jezgra (bez ecall-a)
 void* TCB::operator new(size_t size) {
@@ -21,9 +23,16 @@ void TCB::operator delete(void* ptr) {
 TCB::TCB(Body body, void* arg, uint64* stack, bool systemLevel)
     : body(body), arg(arg), stack(stack),
       context({0, 0}),
-      finished(false), systemLevel(systemLevel), next(nullptr),
+      finished(false), systemLevel(systemLevel),
+      timeSlice(DEFAULT_TIME_SLICE), next(nullptr),
       blockResult(0), pendingN(1)
 {}
+
+// otkucaj tajmera: kvantum tekuce niti curi; kad iscuri - preotimanje.
+// (nulta nit main-a mora da postoji pre prvog otkucaja - vidi main.cpp)
+bool TCB::tick() {
+    return ++usedTicks >= running->timeSlice;
+}
 
 // pocisti nit koja je umrla pre naseg budjenja (njen stek i tcb);
 // zovemo je sa SVAKOG mesta budjenja: iza contextSwitch-a i na ulazu u wrapper
@@ -48,12 +57,8 @@ void TCB::threadWrapper() {
     }
 
     // korisnicka nit: namesti sret tako da "vrati" u userWrapper, u u-modu
-    uint64 target = (uint64)&userWrapper;
-    asm volatile("csrw sepc, %0" : : "r"(target));
-    uint64 sstatus;
-    asm volatile("csrr %0, sstatus" : "=r"(sstatus));
-    sstatus &= ~(1UL << 8);                    // spp = 0: sret vodi u u-mode
-    asm volatile("csrw sstatus, %0" : : "r"(sstatus));
+    Riscv::w_sepc((uint64)&userWrapper);
+    Riscv::mc_sstatus(Riscv::SSTATUS_SPP);     // spp = 0: sret vodi u u-mode
     asm volatile("sret");                      // spust: dalje u userWrapper
 }
 
@@ -102,6 +107,8 @@ void TCB::switchToNext() {
     }
 
     running = next;
+    usedTicks = 0;   // novoizabrana nit dobija svez kvantum - jedno mesto
+                     // pokriva sve puteve: dispatch, exit, blokadu i preotimanje
     contextSwitch(&old->context, &running->context);
     // budjenje: sad smo na steku probudjene niti - bezbedno pocisti zombija
     reapZombie();

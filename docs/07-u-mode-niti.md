@@ -74,7 +74,7 @@ konzolna nit iz zadatka 4) ostaju u s-modu - pdf izricito trazi da se
 
 ## lepota koju smo dobili besplatno: povratak u PRAVI rezim
 
-kad u-nit uradi ecall, hardver upise spp=0 (dosao iz u-moda). handleTrap
+kad u-nit uradi ecall, hardver upise spp=0 (dosao iz u-moda). handleSupervisorTrap
 ODMAH snima sstatus (sa tim spp=0) u lokalnu promenljivu - deo konteksta
 niti! - i vraca ga pred sret. dakle:
 

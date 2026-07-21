@@ -19,6 +19,7 @@ na koja treba znati odgovor.
 | 08 | [zvanicni testovi + polling konzola](08-zvanicni-testovi.md) | gotovo |
 | 09 | [semafori (zadatak 3)](09-semafori.md) | gotovo |
 | 10 | [vodic kroz flowove (citanje koda)](10-vodic-kroz-flowove.md) | gotovo |
+| 11 | [deljenje vremena (preotimanje)](11-deljenje-vremena.md) | gotovo |
 
 ## trenutno stanje projekta
 
@@ -28,16 +29,33 @@ na koja treba znati odgovor.
   nepoznat uzrok; maska prekida u sie registru (vazi u oba rezima)
 - zadatak 2 (niti): KOMPLETAN - ZVANICNI TESTOVI 1 i 7 PROLAZE (2026-07-20).
   syscalls 0x11-0x13, c api, u-mode tela, zombi ciscenje, t-registri prezivljavaju
-  dispatch (test 1: "C: t1=7"), polling putc/getc za meni testova
+  dispatch (test 1: "C: t1=7")
+- konzola (2026-07-21, VAZNA ISPRAVKA): getc/putc preko console.lib
+  (__getc/__putc + console_handler na prekid, pdf str. 31) umesto naseg
+  pollinga; sie bitovi 1 i 9 ukljuceni; userMain je sada NIT (pdf str. 4);
+  svi testovi ponovo overeni posle izmene
 - zadatak 3 (semafori): ZVANICNI TEST 3 PROLAZI (2026-07-19); test 1 regresija ok.
   scb, pozivi 0x21-0x26, trece stanje niti (blokirana), switchToNext refaktor,
-  globalni new/delete za korisnicki sloj (newdelete.cpp)
+  globalni new/delete za korisnicki sloj (_new.cpp)
 - c++ api (syscall_cpp.hpp/.cpp): GOTOV - ZVANICNI TESTOVI 2 i 4 PROLAZE
   (2026-07-20). Thread/Semaphore/PeriodicThread/Console kao tanki omotaci;
   runWrapper bira body ili run() (pdf pravilo); sleep i PeriodicThread su
   stub do zadatka 4. TIME JE SEKCIJA OD 20 POENA KOMPLETNO OVERENA
   (testovi 1, 2, 3, 4 i 7 svi prolaze)
-- u toku: rezim potpunog razumevanja - citanje koda po lekciji 10
+- preimenovanje na skolske konvencije (2026-07-21, projektna odluka):
+  trap.S -> supervisorTrap.S; trapHandlers.cpp -> riscv.cpp + klasa Riscv
+  (csr helperi r_/w_/ms_/mc_ umesto sirovih asm blokova); handleTrap ->
+  handleSupervisorTrap; newdelete.cpp -> _new.cpp (SCB je probano kao
+  _sem pa VRACENO na SCB - studentova odluka). logika NIJE menjana;
+  unutrasnjost TCB-a (switchToNext, reapZombie, userWrapper, systemLevel)
+  namerno zadrzana nasa - to su nase projektne odluke
+- DELJENJE VREMENA (2026-07-21, odluka studenta - obim kao kolegin
+  projekat): preotimanje na tajmerski prekid - TCB::tick + dispatch iz
+  grane code==1, kvantum timeSlice po niti, reset u switchToNext,
+  prekidi u main-u tek posle nulte niti. testovi 3/4 sada teku
+  KONTINUALNO (overeno); time_sleep, svoja konzola i PeriodicThread
+  se i dalje NE rade
+- u toku: rezim potpunog razumevanja - citanje koda po lekcijama 10 i 11
 - sledece (odluka studenta): zadatak 4 (tajmer/preotimanje, time_sleep,
   prava konzola -> testovi 5 i 6) ili priprema odbrane
 

@@ -15,16 +15,17 @@ znanje iz prethodnih. ne preskaci.
 |------|------|-------|
 | korisnicki program | `test/*.cpp`, `src/userMain.cpp` | zvanicni testovi; ne zna nista o jezgru, zna samo api |
 | c++ api | `h/syscall_cpp.hpp`, `src/syscall_cpp.cpp` | klase Thread/Semaphore/Console - tanki omotaci oko c api-ja |
-| new/delete | `src/newdelete.cpp` | globalni new/delete korisnickog sloja -> mem_alloc/mem_free |
+| new/delete | `src/_new.cpp` | globalni new/delete korisnickog sloja -> mem_alloc/mem_free |
 | c api | `h/syscall_c.h`, `src/syscall_c.cpp` | funkcije koje pakuju argumente u registre i rade `ecall` |
-| kapija | `src/trap.S` | jedini ulaz u jezgro (stvec pokazuje ovde); cuva/vraca registre |
-| razvodnik | `src/trapHandlers.cpp` | `handleTrap`: cita scause, grana se po kodu poziva |
+| kapija | `src/supervisorTrap.S` | jedini ulaz u jezgro (stvec pokazuje ovde); cuva/vraca registre |
+| razvodnik | `src/riscv.cpp` | `handleSupervisorTrap`: cita scause, grana se po kodu poziva |
 | jezgro-niti | `h/tcb.hpp`, `src/tcb.cpp` | TCB, threadWrapper/userWrapper, dispatch, zombi |
 | jezgro-zamena | `src/contextSwitch.S` | zamrzni jednu nit, odmrzni drugu |
 | jezgro-red | `h/scheduler.hpp`, `src/scheduler.cpp` | fifo red spremnih niti |
 | jezgro-semafori | `h/scb.hpp`, `src/scb.cpp` | SCB: brojac + fifo red blokiranih |
 | jezgro-memorija | `h/memoryAllocator.hpp`, `src/memoryAllocator.cpp` | slobodna lista, first-fit |
-| start/kraj | `src/main.cpp` | podesavanje masine, nulta nit, poziv userMain |
+| start/kraj | `src/main.cpp` | podesavanje masine, nulta nit, userMain kao nit |
+| konzola (dato) | `lib/console.h` + console.lib | __getc/__putc (baferi) + console_handler (prekid) |
 
 kljucna slika koju drzi ceo projekat: **korisnicki sloj i jezgro su u istom
 adresnom prostoru** (nema memorijske zastite), ali granica privilegija
@@ -40,24 +41,34 @@ fajl: `src/main.cpp` (ceo, kratak je)
 
 1. fakultetska biblioteka (hw.lib) podize masinu, ispise "xv6 kernel is
    booting" i pozove nas `main()` - u SISTEMSKOM rezimu.
-2. `main.cpp:13-14` - u `stvec` se upisuje adresa `trapHandler`-a iz
-   trap.S. od ovog trenutka svaki ecall/izuzetak/prekid skace TU i samo tu.
-3. `main.cpp:20-23` - maskiranje prekida PO VRSTI u `sie` registru:
-   gase se ssie (tajmer, bit 1) i seie (konzola, bit 9). zasto bas `sie`
-   a ne `sstatus.SIE`: sie vazi i u korisnickom rezimu, sstatus.SIE se
-   tamo ignorise (lekcija 04/07). zahtevi se pamte u `sip`, ali ne stizu.
-4. `main.cpp:29` - `MemoryAllocator::init()`: heap postaje jedan veliki
+2. `main.cpp` (csrw stvec) - u `stvec` se upisuje adresa `trapHandler`-a
+   iz supervisorTrap.S. od ovog trenutka svaki ecall/izuzetak/prekid skace TU i samo tu.
+3. `main.cpp` (sie blok) - prekidi PO VRSTI u `sie` registru se UKLJUCUJU:
+   konzola (seie, bit 9) mora da bude ziva jer console_handler na svaki
+   njen prekid puni/prazni bafere console.lib (lekcija 08); tajmer (ssie,
+   bit 1) je odmaskiran ali se za sada samo potvrdjuje - prava obrada je
+   zadatak 4. zasto bas `sie`: on vazi i u korisnickom rezimu, gde se
+   sstatus.SIE ignorise (lekcija 04/07).
+4. `main.cpp` (sstatus blok) - `sstatus.SIE = 1`: da prekidi stizu i dok
+   je main (s-mode) na procesoru; u-mode niti ovaj bit ne gledaju.
+5. `main.cpp` - `MemoryAllocator::init()`: heap postaje jedan veliki
    slobodan blok.
-5. `main.cpp:33` - main dobija svoj TCB ("nulta nit", systemLevel=true)
+6. `main.cpp` - main dobija svoj TCB ("nulta nit", systemLevel=true)
    sa PRAZNIM kontekstom i bez steka. zasto: kad main prvi put ustupi
    procesor, mora da postoji mesto gde ce se zamrznuti (flow 4).
-6. `main.cpp:35` - poziv `userMain()` - obican poziv funkcije (jos uvek
-   u sistemskom rezimu!). tu pocinje meni testova.
-7. `main.cpp:41` - kad se userMain vrati: upis 0x5555 na 0x100000 gasi
-   emulator.
+7. `main.cpp` - pdf str. 4: main "pokrece NIT nad funkcijom userMain" -
+   obicnim `thread_create` (ecall radi i iz s-moda!) nad omotacem
+   `userMainWrapper`, pa se vrti u `while (!userMainDone) thread_dispatch()`
+   i ustupa procesor dok korisnicki program ne zavrsi. meni testova time
+   radi u U-MODU, kao i sav korisnicki kod.
+   caka: kraj se ceka preko zastavice `userMainDone` koju omotac digne
+   PRE thread_exit-a - ne preko rucke niti, jer tcb zavrsene niti pojede
+   zombi ciscenje (flow 5), pa bi citanje rucke bilo use-after-free.
+8. `main.cpp` - kad zastavica padne: upis 0x5555 na 0x100000 gasi emulator.
 
-kljucna tacka: main NIJE posebna magija - posle koraka 5 on je obicna
-nit medju nitima, samo sto je prva i sto joj kontekst pise tek prvi dispatch.
+kljucna tacka: main NIJE posebna magija - posle koraka 6 on je obicna
+nit medju nitima (uvek spreman, nikad blokiran), samo sto je prvi i sto
+mu kontekst pise tek prvi dispatch.
 
 ---
 
@@ -66,10 +77,10 @@ nit medju nitima, samo sto je prva i sto joj kontekst pise tek prvi dispatch.
 ovo je NAJVAZNIJI flow - svi ostali su varijacije. scenario: korisnicki
 kod kaze `new BufferCPP(n)` ili direktno `mem_alloc(...)`.
 
-fajlovi redom: `newdelete.cpp` -> `syscall_c.cpp` -> `trap.S` ->
-`trapHandlers.cpp` -> `memoryAllocator.cpp` -> nazad istim putem.
+fajlovi redom: `_new.cpp` -> `syscall_c.cpp` -> `supervisorTrap.S` ->
+`riscv.cpp` -> `memoryAllocator.cpp` -> nazad istim putem.
 
-1. `src/newdelete.cpp:10-12` - globalni `operator new` samo prosledi u
+1. `src/_new.cpp:10-12` - globalni `operator new` samo prosledi u
    `mem_alloc(size)`. (ako je korisnik zvao mem_alloc direktno, preskoci.)
 2. `src/syscall_c.cpp:4-19` - `mem_alloc`: bajtove zaokruzi navise na
    blokove (abi poziv 0x01 prima BLOKOVE); spakuje a0=0x01, a1=blokovi;
@@ -77,25 +88,25 @@ fajlovi redom: `newdelete.cpp` -> `syscall_c.cpp` -> `trap.S` ->
 3. HARDVER (nema koda za citanje, samo znaj): ecall postavlja
    scause=8 (iz u-moda) ili 9 (iz s-moda), sepc=adresa samog ecall-a,
    sstatus.SPP=rezim iz kog se doslo, pc skace na stvec -> trapHandler.
-4. `src/trap.S:11-26` - na stek tekuce niti spusti ra, t0-t6, a1-a7.
+4. `src/supervisorTrap.S:11-26` - na stek tekuce niti spusti ra, t0-t6, a1-a7.
    zasto ne i a0: a0 ce poneti povratnu vrednost poziva - namerno se
    NE vraca staro stanje (lekcija 04 - bug koji nas je ujeo).
-5. `src/trap.S:28` - `call handleTrap`. registri a0..a4 u tom trenutku
+5. `src/supervisorTrap.S:28` - `call handleSupervisorTrap`. registri a0..a4 u tom trenutku
    jos drze vrednosti koje je korisnik spakovao - pa ih c funkcija vidi
    kao svoje parametre. to je cela "magija" prenosa argumenata.
-6. `src/trapHandlers.cpp:11-18` - scause/sepc/sstatus se ODMAH citaju u
+6. `src/riscv.cpp:13-19` - scause/sepc/sstatus se ODMAH citaju u
    lokalne promenljive. zasto lokalne: one zive na steku OVE niti; ako
    obrada promeni nit, globalne csr-ove ce gaziti tudji trapovi, a nase
    vrednosti mirno cekaju na nasem steku (flow 4 i 6 zive od ovoga).
-7. `src/trapHandlers.cpp:39-41` - grana za ecall: `sepc += 4` u LOKALNOJ
+7. `src/riscv.cpp:40-42` - grana za ecall: `sepc += 4` u LOKALNOJ
    kopiji - da se po povratku nastavi IZA ecall-a, ne na njemu.
-8. `src/trapHandlers.cpp:43-46` - `switch (a0)`, slucaj 0x01: poziv
+8. `src/riscv.cpp:44-47` - `switch (a0)`, slucaj 0x01: poziv
    `MemoryAllocator::alloc(a1 * MEM_BLOCK_SIZE)`. procitaj i sam alokator
    (`src/memoryAllocator.cpp`): first-fit kroz slobodnu listu, heder u
    prvih 16B, ostatak bloka nazad u listu.
-9. `src/trapHandlers.cpp:113-115` - pred izlaz: nasi lokalni sstatus i
+9. `src/riscv.cpp:114-116` - pred izlaz: nasi lokalni sstatus i
    sepc se VRACAJU u csr-ove; `return ret` stavlja rezultat u a0.
-10. `src/trap.S:30-46` - vrati sve sacuvane registre (a0 NE - u njemu je
+10. `src/supervisorTrap.S:30-46` - vrati sve sacuvane registre (a0 NE - u njemu je
     rezultat), `sret`: pc=sepc (instrukcija iza ecall-a), rezim=SPP.
 11. `src/syscall_c.cpp:18` - mem_alloc nastavlja iza ecall-a: u `code`
     (a0) je stigao pokazivac; cast i return korisniku.
@@ -113,7 +124,7 @@ scenario: `test/Threads_CPP_API_test.cpp` (funkcija `Threads_CPP_API_test`,
 pri dnu fajla): `threads[0] = new WorkerA(); threads[0]->start();`
 
 fajlovi redom: test -> `syscall_cpp.cpp` -> `syscall_c.cpp` ->
-`trapHandlers.cpp` -> `tcb.cpp` -> `scheduler.cpp`.
+`riscv.cpp` -> `tcb.cpp` -> `scheduler.cpp`.
 
 1. test: `new WorkerA()` - operator new ide kroz ceo flow 2 (alokacija
    objekta u heap-u jezgra kroz ecall!), pa se izvrsi konstruktor:
@@ -130,7 +141,7 @@ fajlovi redom: test -> `syscall_cpp.cpp` -> `syscall_c.cpp` ->
    prolaz kroz ceo flow 2!), pa spakuje a0=0x11, a1=&myHandle,
    a2=runWrapper, a3=this, a4=stek; `ecall`. (pdf abi: stek daje
    pozivalac, ne jezgro.)
-6. `src/trapHandlers.cpp:50-56` - slucaj 0x11: poziv
+6. `src/riscv.cpp:51-57` - slucaj 0x11: poziv
    `TCB::createThread(telo, arg, stek, systemLevel=false)` - false jer
    niti nastale syscall-om izvrsavaju telo u korisnickom rezimu.
 7. `src/tcb.cpp:69-91` - `createThread`: `new TCB(...)` - PAZI, ovo je
@@ -143,9 +154,9 @@ fajlovi redom: test -> `syscall_cpp.cpp` -> `syscall_c.cpp` ->
      u threadWrapper (flow 4 objasnjava zasto bas takav oblik).
 8. `src/tcb.cpp:86` - `Scheduler::put(tcb)`: nit staje na kraj reda
    spremnih (`src/scheduler.cpp:8-16`).
-9. `src/trapHandlers.cpp:53` - `*(TCB**)a1 = tcb`: jezgro kroz pokazivac
+9. `src/riscv.cpp:54` - `*(TCB**)a1 = tcb`: jezgro kroz pokazivac
    upise rucku pravo u `myHandle` objekta Thread. ret=0.
-10. nazad kroz trap.S/sret u thread_create, pa u start(), pa u test.
+10. nazad kroz supervisorTrap.S/sret u thread_create, pa u start(), pa u test.
 
 kljucna tacka: posle start() nit SAMO STOJI U REDU. nece se izvrsiti ni
 jedna njena instrukcija dok neko ne pozove dispatch (flow 4).
@@ -158,17 +169,17 @@ ovo je srce projekta. scenario: nit A (recimo main/nulta) zove
 `thread_dispatch()` ili `Thread::dispatch()`, a iz reda izlazi svez
 WorkerA iz flowa 3.
 
-fajlovi redom: `syscall_cpp.cpp` -> `syscall_c.cpp` -> `trapHandlers.cpp`
+fajlovi redom: `syscall_cpp.cpp` -> `syscall_c.cpp` -> `riscv.cpp`
 -> `tcb.cpp` -> `contextSwitch.S` -> `tcb.cpp` (threadWrapper) ->
 `syscall_cpp.cpp` (runWrapper) -> test (run()).
 
 deo 1 - nit A tone:
 
 1. `src/syscall_cpp.cpp:37-39` - `Thread::dispatch()` -> `thread_dispatch()`.
-2. `src/syscall_c.cpp:62-65` - a0=0x13, `ecall` -> trap.S sacuva
+2. `src/syscall_c.cpp:62-65` - a0=0x13, `ecall` -> supervisorTrap.S sacuva
    registre nita A NA NJEN STEK (flow 2, korak 4).
-3. `src/trapHandlers.cpp:61-64` - slucaj 0x13: `TCB::dispatch()`.
-   zapamti: sepc/sstatus nita A su vec bezbedni u LOKALIMA handleTrap-a,
+3. `src/riscv.cpp:62-65` - slucaj 0x13: `TCB::dispatch()`.
+   zapamti: sepc/sstatus nita A su vec bezbedni u LOKALIMA handleSupervisorTrap-a,
    na steku nita A.
 4. `src/tcb.cpp:111-115` - `dispatch()`: nit A nije gotova ->
    `Scheduler::put(running)` (A staje na KRAJ reda spremnih), pa
@@ -210,16 +221,16 @@ deo 3 - sta se desi kad nit A kasnije dodje na red:
     ucita A-ove ra/sp -> `ret` NE vodi u threadWrapper nego NAZAD u
     `switchToNext`, tacno iza poziva contextSwitch (`tcb.cpp:106-107`).
 13. `reapZombie()` - budjenje je uvek mesto ciscenja.
-14. povratak uz A-ov stek: switchToNext -> TCB::dispatch -> handleTrap
-    slucaj 0x13 -> `trapHandlers.cpp:113-115` upisuje A-ove LOKALNE
-    sepc/sstatus (koji su sve vreme cekali na A-ovom steku!) -> trap.S
+14. povratak uz A-ov stek: switchToNext -> TCB::dispatch -> handleSupervisorTrap
+    slucaj 0x13 -> `riscv.cpp:114-116` upisuje A-ove LOKALNE
+    sepc/sstatus (koji su sve vreme cekali na A-ovom steku!) -> supervisorTrap.S
     vraca A-ove registre -> `sret` -> nit A nastavlja iza svog ecall-a
     u thread_dispatch, kao da se nista nije desilo.
 
 kljucne tacke:
 - svaka nit koja ne radi je zamrznuta na TACNO jednom od dva mesta:
   (a) usred switchToNext, iza poziva contextSwitch, sa celim lancem
-  ecall->handleTrap->dispatch na svom steku, ili (b) kao svez falsifikat
+  ecall->handleSupervisorTrap->dispatch na svom steku, ili (b) kao svez falsifikat
   koji pokazuje na threadWrapper.
 - zato lokalni sepc/sstatus rade: parkirani su na steku niti i putuju
   s njom kroz zamrzavanje.
@@ -231,7 +242,7 @@ kljucne tacke:
 scenario: WorkerA::run() zavrsi poslednju liniju.
 
 fajlovi redom: test -> `syscall_cpp.cpp` -> `tcb.cpp` -> `syscall_c.cpp`
--> `trapHandlers.cpp` -> `tcb.cpp`.
+-> `riscv.cpp` -> `tcb.cpp`.
 
 1. `run()` se vrati -> vracamo se u `runWrapper` (`syscall_cpp.cpp:35`)
    -> on se vrati u `userWrapper` (`tcb.cpp:64`).
@@ -239,7 +250,7 @@ fajlovi redom: test -> `syscall_cpp.cpp` -> `tcb.cpp` -> `syscall_c.cpp`
    jezgro osim ecall-a. (petlja `for(;;)` ispod je osiguranje - dotle
    nikad ne dolazi.)
 3. `src/syscall_c.cpp:56-60` - a0=0x12, `ecall`.
-4. `src/trapHandlers.cpp:57-60` - slucaj 0x12:
+4. `src/riscv.cpp:62-65` - slucaj 0x12:
    `running->setFinished(true)` pa `TCB::dispatch()` - odavde za ovu nit
    nema povratka.
 5. `src/tcb.cpp:111-115` - dispatch vidi finished=true: nit NE ide u
@@ -266,7 +277,7 @@ proizvodjac kasnije probudi sa `put()`. c++ verzija ide kroz klasu
 Semaphore, c verzija direktno kroz sem_wait - jezgro je isto.
 
 fajlovi redom: `test/buffer_CPP_API.cpp` -> `syscall_cpp.cpp` ->
-`syscall_c.cpp` -> `trapHandlers.cpp` -> `scb.cpp` -> `tcb.cpp` ->
+`syscall_c.cpp` -> `riscv.cpp` -> `scb.cpp` -> `tcb.cpp` ->
 `contextSwitch.S` -> (druga nit) -> nazad.
 
 deo 1 - potrosac tone u san:
@@ -274,21 +285,21 @@ deo 1 - potrosac tone u san:
 1. `test/buffer_CPP_API.cpp` - `get()` prvo `itemAvailable->wait()`.
 2. `src/syscall_cpp.cpp:63-65` - `Semaphore::wait()` -> `sem_wait(myHandle)`.
 3. `src/syscall_c.cpp:83-88` - a0=0x23, a1=rucka, `ecall`.
-4. `src/trapHandlers.cpp:78-80` - slucaj 0x23: `((SCB*)a1)->wait(1)`.
+4. `src/riscv.cpp:79-81` - slucaj 0x23: `((SCB*)a1)->wait(1)`.
 5. `src/scb.cpp:36-51` - `SCB::wait(1)`: value je 0 (bafer prazan) ->
    nema prolaza. nit se upisuje u red OVOG semafora (`enqueue(self)`,
    blockResult=0, pendingN=1) i zove `TCB::switchToNext()`. PAZI:
    nit NE ide u scheduler - za nju sada zna samo red ovog semafora.
 6. `switchToNext` + `contextSwitch` zamrznu potrosaca TACNO TU - usred
    SCB::wait. na njegovom steku ceka cela kula: userov poziv -> ecall
-   okvir (trap.S) -> handleTrap okvir (sa NJEGOVIM sepc/sstatus u
+   okvir (supervisorTrap.S) -> handleSupervisorTrap okvir (sa NJEGOVIM sepc/sstatus u
    lokalima!) -> wait okvir -> switchToNext okvir -> 12 s-registara.
    procesor dobija sledeca spremna nit.
 
 deo 2 - proizvodjac ga budi:
 
 7. proizvodjac: `put()` -> `itemAvailable->signal()` -> ecall 0x24 ->
-   `src/trapHandlers.cpp:81-83` -> `SCB::signal(1)`.
+   `src/riscv.cpp:82-84` -> `SCB::signal(1)`.
 8. `src/scb.cpp:53-65` - `signal`: value += 1; petlja: dok na celu reda
    ima cekaca ciji pendingN staje u value - `dequeue()`, value -=
    pendingN, blockResult=0, `Scheduler::put(t)`. potrosac je sada
@@ -301,7 +312,7 @@ deo 3 - potrosac se budi:
 10. kad dodje na red (neciji dispatch), contextSwitch ga odmrzne: `ret`
     vodi nazad u switchToNext (`tcb.cpp:106`), reapZombie, povratak u
     `SCB::wait` (`scb.cpp:50`) - i wait vrati `self->blockResult` (0).
-11. uz stek: handleTrap upise NJEGOVE lokalne sepc/sstatus, trap.S,
+11. uz stek: handleSupervisorTrap upise NJEGOVE lokalne sepc/sstatus, supervisorTrap.S,
     sret -> potrosac nastavlja iza ecall-a u sem_wait, dobija 0,
     `Semaphore::wait()` vrati 0, `get()` nastavlja - uzima podatak.
 
@@ -316,7 +327,7 @@ isti taj povratak javi niti da je cekala dzabe.
    oslobadjanje memorije objekta.
 2. `src/syscall_cpp.cpp:59-61` - `~Semaphore()`: `sem_close(myHandle)`
    -> ecall 0x22.
-3. `src/trapHandlers.cpp:71-77` - slucaj 0x22: `sem->close()` pa
+3. `src/riscv.cpp:72-78` - slucaj 0x22: `sem->close()` pa
    `delete sem` (SCB-ov delete, direktno na MemoryAllocator).
 4. `src/scb.cpp:67-75` - `close()`: sve cekace probudi sa
    blockResult=-1 i vrati u scheduler - njihov wait ce vratiti gresku
@@ -326,29 +337,41 @@ isti taj povratak javi niti da je cekala dzabe.
 
 ---
 
-## flow 7: konzola - getc/putc (privremeni polling)
+## flow 7: konzola - getc/putc kroz console.lib
 
 scenario: meni testova ceka tvoj unos; printString ispisuje tekst.
+(istorija: prvo smo pogresno radili rucni polling - lekcija 08 objasnjava
+zasto je 20p verzija DUZNA da koristi console.lib, pdf str. 31.)
 
 1. `test/printing.cpp` - `printString` u petlji zove `putc(c)` za svaki
    karakter (uz zakljucavanje preko `test/lock.S` copy_and_swap - to je
    deo zvanicnog test paketa, ne naseg jezgra).
-2. `src/syscall_c.cpp:113-123` - getc: a0=0x41; putc: a0=0x42, a1=znak.
-3. `src/trapHandlers.cpp:90-98` - jezgro POLL-uje: vrti se dok status
-   registar konzole ne kaze da ima karakter (rx) / da ima mesta (tx),
-   pa procita/upise podatak.
+2. `src/syscall_c.cpp:113-123` - getc: a0=0x41; putc: a0=0x42, a1=znak; ecall.
+3. `src/riscv.cpp` (case 0x41/0x42) - jezgro NE dira hardver
+   direktno: pozove `__getc()` / `__putc(znak)` iz console.lib. te
+   funkcije rade nad SVOJIM baferima; ako bafer nije spreman (nema znaka /
+   nema mesta), CEKAJU - i dok cekaju SAME privremeno dozvole prekide.
+4. pritisak tastera / kontroler spreman -> konzolni prekid -> ponovo
+   `trapHandler` (moguce UGNJEZDENO, usred koraka 3!) -> `handleSupervisorTrap`
+   grana code==9 -> `console_handler()` - on sam odradi plic_claim/
+   plic_complete i prebaci znakove kontroler<->baferi.
+5. povratak iz ugnjezdenog trapa nazad u __getc/__putc koji sada imaju
+   sta im treba, pa se syscall zavrsava normalnim putem (flow 2).
 
-kljucna tacka (i poznati nedostatak): dok jezgro vrti polling petlju
-cekajuci TVOJ karakter, NIJEDNA druga nit ne radi - ceo sistem stoji u
-toj while petlji. zato je test 4 "seckav". ovo je svesno privremeno:
-zadatak 4 uvodi bafere + prekid konzole + internu nit, pa getc postaje
-blokirajuci (semafor!) umesto pollinga.
+kljucne tacke:
+- ugnjezdeni trap ne pravi haos ZATO sto handleSupervisorTrap drzi sepc/sstatus
+  u lokalima (flow 2, korak 6) - svaki nivo ima svoje vrednosti na steku.
+- __getc ceka DRZECI procesor (pusta prekide, ali sam nikad ne ustupa) -
+  ali posto pusta prekide, TAJMER moze da ga preotme (lekcija 11): nit
+  se zamrzne usred cekanja u jezgru, druge niti rade, pa se cekanje
+  nastavi. zato testovi 3/4 teku kontinualno.
+- nas kod NIGDE ne zove plic_claim/plic_complete - to radi console_handler.
 
 ---
 
 ## kontrolna pitanja (kad prodjes sve flowove)
 
-1. zasto trap.S ne cuva a0, i sta bi puklo da ga cuva i vraca?
+1. zasto supervisorTrap.S ne cuva a0, i sta bi puklo da ga cuva i vraca?
 2. u kom trenutku i u kojoj promenljivoj zivi sepc niti koja spava na
    semaforu? sta bi poslo po zlu da je sepc samo procitan pred sret?
 3. nabroj tacna dva "oblika" u kojima zamrznuta nit moze da postoji.
@@ -359,6 +382,9 @@ blokirajuci (semafor!) umesto pollinga.
 6. sta tacno vidi `runWrapper` kad je Thread napravljen zasticenim
    konstruktorom, a sta kad je napravljen sa pokazivacem na funkciju?
 7. zasto TCB i SCB imaju sopstvene operator new/delete umesto da koriste
-   globalne iz newdelete.cpp?
-8. objasni put karaktera od pritiska tastera do pojavljivanja u baferu
-   testa 4 - i zasto za to vreme niko drugi ne radi.
+   globalne iz _new.cpp?
+8. objasni put karaktera od pritiska tastera do povratka iz getc - kroz
+   koje bafere prolazi i ko ga prebacuje na svakom koraku?
+9. sta se desi kad tajmerski prekid stigne dok __putc ceka mesto u
+   izlaznom baferu? nabroj trapove koji su u tom trenutku "otvoreni".
+10. zasto main ceka kraj userMain-a preko zastavice, a ne preko rucke niti?

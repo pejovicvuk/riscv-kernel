@@ -1,4 +1,6 @@
+#include "../h/riscv.hpp"
 #include "../lib/hw.h"
+#include "../lib/console.h"   // __getc/__putc/console_handler (console.lib, pdf str. 31)
 #include "../h/print.hpp"
 #include "../h/memoryAllocator.hpp"
 #include "../h/tcb.hpp"
@@ -6,12 +8,11 @@
 
 // zajednicki c deo prekidne rutine: cita scause i grana se na obradu.
 // a0..a4 parametri se poklapaju sa registrima a0..a4 u trenutku trapa
-// (trap.S ih ne dira pre call-a), pa abi argumente citamo direktno.
-extern "C" uint64 handleTrap(uint64 a0, uint64 a1, uint64 a2, uint64 a3, uint64 a4) {
-    uint64 cause, sepc, sstatus;
-    asm volatile("csrr %0, scause"  : "=r"(cause));
-    asm volatile("csrr %0, sepc"    : "=r"(sepc));
-    asm volatile("csrr %0, sstatus" : "=r"(sstatus));
+// (supervisorTrap.S ih ne dira pre call-a), pa abi argumente citamo direktno.
+extern "C" uint64 handleSupervisorTrap(uint64 a0, uint64 a1, uint64 a2, uint64 a3, uint64 a4) {
+    uint64 cause   = Riscv::r_scause();
+    uint64 sepc    = Riscv::r_sepc();
+    uint64 sstatus = Riscv::r_sstatus();
     // sepc i sstatus su DEO KONTEKSTA NITI: obrada moze da promeni nit
     // (dispatch), a dok ova nit spava, globalne csr registre ce puniti tudji
     // trapovi. zato ih odmah snimamo u lokalne promenljive (zive na steku ove
@@ -22,17 +23,23 @@ extern "C" uint64 handleTrap(uint64 a0, uint64 a1, uint64 a2, uint64 a3, uint64 
     uint64 ret    = a0;
 
     if (topBit == 1) {
-        // asinhroni prekid - za sad samo pocisti zahtev i vrati se
+        // asinhroni prekid
         if (code == 1) {
-            // softverski (tajmer) - obrisi ssip bit u sip
-            uint64 sip;
-            asm volatile("csrr %0, sip" : "=r"(sip));
-            sip &= ~(1UL << 1);
-            asm volatile("csrw sip, %0" : : "r"(sip));
+            // softverski (tajmer), stize 10x u sekundi: potvrdi prijem,
+            // pa naplati otkucaj tekucoj niti. istekao kvantum ->
+            // ASINHRONA promena konteksta: nit gubi procesor bez svog
+            // znanja i pristanka (deljenje vremena). radi i kad prekid
+            // upadne u tudje cekanje (__getc/__putc pustaju prekide) -
+            // nit se zamrzne usred jezgra, na svom steku, kao kod semafora
+            Riscv::mc_sip(Riscv::SIP_SSIP);
+            if (TCB::tick()) {
+                TCB::dispatch();
+            }
         } else if (code == 9) {
-            // spoljasnji (konzola) - potvrdi preko plic-a
-            int irq = plic_claim();
-            plic_complete(irq);
+            // spoljasnji (konzola): console_handler iz console.lib sam
+            // odradi plic_claim/plic_complete i prebaci znakove izmedju
+            // kontrolera i svojih bafera (puni ulazni / prazni izlazni)
+            console_handler();
         }
         // sepc se ne uvecava: prekinuta instrukcija mora da se ponovi
     }
@@ -87,13 +94,14 @@ extern "C" uint64 handleTrap(uint64 a0, uint64 a1, uint64 a2, uint64 a3, uint64 
             case 0x26:   // sem_signal_n(id, n)
                 ret = a1 ? (uint64)((SCB*)a1)->signal((unsigned)a2) : (uint64)-1;
                 break;
-            case 0x41:   // getc - PRIVREMENO polling (baferi + prekid = zadatak 4)
-                while ((*(volatile char*)CONSOLE_STATUS & CONSOLE_RX_STATUS_BIT) == 0) {}
-                ret = (uint64)(*(volatile char*)CONSOLE_RX_DATA);
+            case 0x41:   // getc - iz ulaznog bafera console.lib (pdf str. 31)
+                // __getc ceka znak, a dok ceka SAM privremeno dozvoli
+                // prekide -> moguc ugnjezdeni trap (konzola puni bafer).
+                // nasi sepc/sstatus su bezbedni: vec su u lokalima
+                ret = (uint64)__getc();
                 break;
-            case 0x42:   // putc - PRIVREMENO polling (baferi + interna nit = zadatak 4)
-                while ((*(volatile char*)CONSOLE_STATUS & CONSOLE_TX_STATUS_BIT) == 0) {}
-                *(volatile char*)CONSOLE_TX_DATA = (char)a1;
+            case 0x42:   // putc - na konzolu kroz console.lib
+                __putc((char)a1);
                 ret = 0;
                 break;
             default:
@@ -110,7 +118,7 @@ extern "C" uint64 handleTrap(uint64 a0, uint64 a1, uint64 a2, uint64 a3, uint64 
     }
 
     // svako se vraca sa SVOJIM vrednostima, ma koliko dugo spavao
-    asm volatile("csrw sstatus, %0" : : "r"(sstatus));
-    asm volatile("csrw sepc, %0"    : : "r"(sepc));
+    Riscv::w_sstatus(sstatus);
+    Riscv::w_sepc(sepc);
     return ret;
 }

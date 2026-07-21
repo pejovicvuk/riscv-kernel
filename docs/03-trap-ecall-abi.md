@@ -1,6 +1,6 @@
 # 03 - trap, ecall i sistemski pozivi
 
-fajlovi: `src/trap.S`, `src/trapHandlers.cpp`, `src/syscall_c.cpp`, `h/syscall_c.hpp`
+fajlovi: `src/supervisorTrap.S`, `src/riscv.cpp`, `src/syscall_c.cpp`, `h/syscall_c.hpp`
 
 ## ideja u jednoj recenici
 
@@ -51,20 +51,20 @@ top bit 0, kod 9  -> ecall iz sistemskog rezima
 [hardver]
 4. sepc/scause/sstatus se pune, skok na stvec
 
-[trap.S - trapHandler]
+[supervisorTrap.S - trapHandler]
 5. spusti 15 registara na stek          (ra, t0-t6, a1-a7 - vidi lekciju 04 zasto!)
-6. call handleTrap                      a0..a3 su JOS UVEK zateceni registri
-                                        (trap.S ih nije dirao pre call-a) - zato
+6. call handleSupervisorTrap                      a0..a3 su JOS UVEK zateceni registri
+                                        (supervisorTrap.S ih nije dirao pre call-a) - zato
                                         c funkcija cita abi argumente kao parametre
 
-[trapHandlers.cpp - handleTrap]
+[riscv.cpp - handleSupervisorTrap]
 7. cita scause: top bit 0, kod 9        -> ecall (iz sistemskog rezima)
 8. switch(a0): 0x01                     -> MemoryAllocator::alloc(2 * 64)
 9. sepc += 4                            KLJUCNO: sepc pokazuje na sam ecall;
                                         bez ovoga sret vraca NA ecall -> vecna petlja
 10. return ret                          rezultat ode u a0
 
-[trap.S]
+[supervisorTrap.S]
 11. vrati 15 registara sa steka         (a0 se NE vraca - on nosi rezultat!)
 12. sret                                pc<-sepc (iza ecall-a), rezim<-SPP, SIE<-SPIE
 
@@ -92,7 +92,7 @@ return (void*)code;                        // a0 posle ecall-a = rezultat
 ## pitanja za odbranu
 
 1. zasto je dovoljna JEDNA prekidna rutina za sve uzroke? (stvec, scause)
-2. kako handleTrap "magijski" dobija abi argumente kao c parametre?
+2. kako handleSupervisorTrap "magijski" dobija abi argumente kao c parametre?
 3. razlika `sret` i `ret`?
 4. sta bi se desilo bez `sepc += 4` kod ecall-a? a sta ako bismo ga radili kod prekida?
-5. zasto se `a0` ne cuva/ne restaurira u trap.S kao ostali registri?
+5. zasto se `a0` ne cuva/ne restaurira u supervisorTrap.S kao ostali registri?

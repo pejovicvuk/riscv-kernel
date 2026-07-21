@@ -1,7 +1,7 @@
 # 09 - semafori (zadatak 3)
 
 fajlovi: `h/scb.hpp`, `src/scb.cpp`, izmene u `h/tcb.hpp`, `src/tcb.cpp`,
-`src/trapHandlers.cpp` (0x21-0x26), `h/syscall_c.h`, `src/syscall_c.cpp`
+`src/riscv.cpp` (0x21-0x26), `h/syscall_c.h`, `src/syscall_c.cpp`
 
 ## ideja u jednoj recenici
 
@@ -44,7 +44,7 @@ dispatch je sada samo: put(running) + switchToNext().
 nit A: sem_wait(s)  -> ecall 0x23 -> SCB::wait(1)
        value == 0   -> A.blockResult=0, A.pendingN=1
                     -> enqueue(A) u RED SEMAFORA (ne scheduler!)
-                    -> switchToNext(): A parkirana USRED handleTrap-a
+                    -> switchToNext(): A parkirana USRED handleSupervisorTrap-a
    ... rade druge niti ...
 nit B: sem_signal(s) -> ecall 0x24 -> SCB::signal(1)
        value += 1; head(=A).pendingN(=1) <= value
@@ -52,7 +52,7 @@ nit B: sem_signal(s) -> ecall 0x24 -> SCB::signal(1)
        (B nastavlja - signal NE preotima procesor!)
    ... A dodje na red kod schedulera ...
 nit A: budi se iza switchToNext, wait vraca A.blockResult = 0
-       -> handleTrap vraca 0 -> A-jin sem_wait vratio 0. legalno prosla.
+       -> handleSupervisorTrap vraca 0 -> A-jin sem_wait vratio 0. legalno prosla.
 ```
 
 kod (srz scb.cpp):
