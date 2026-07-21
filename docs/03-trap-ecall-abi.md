@@ -1,6 +1,6 @@
 # 03 - trap, ecall i sistemski pozivi
 
-fajlovi: `src/supervisorTrap.S`, `src/riscv.cpp`, `src/syscall_c.cpp`, `h/syscall_c.hpp`
+fajlovi: `src/trap.S`, `src/riscv.cpp`, `src/syscall_c.cpp`, `h/syscall_c.hpp`
 
 ## ideja u jednoj recenici
 
@@ -51,10 +51,10 @@ top bit 0, kod 9  -> ecall iz sistemskog rezima
 [hardver]
 4. sepc/scause/sstatus se pune, skok na stvec
 
-[supervisorTrap.S - trapHandler]
+[trap.S - trapHandler]
 5. spusti 15 registara na stek          (ra, t0-t6, a1-a7 - vidi lekciju 04 zasto!)
 6. call handleSupervisorTrap                      a0..a3 su JOS UVEK zateceni registri
-                                        (supervisorTrap.S ih nije dirao pre call-a) - zato
+                                        (trap.S ih nije dirao pre call-a) - zato
                                         c funkcija cita abi argumente kao parametre
 
 [riscv.cpp - handleSupervisorTrap]
@@ -64,7 +64,7 @@ top bit 0, kod 9  -> ecall iz sistemskog rezima
                                         bez ovoga sret vraca NA ecall -> vecna petlja
 10. return ret                          rezultat ode u a0
 
-[supervisorTrap.S]
+[trap.S]
 11. vrati 15 registara sa steka         (a0 se NE vraca - on nosi rezultat!)
 12. sret                                pc<-sepc (iza ecall-a), rezim<-SPP, SIE<-SPIE
 
@@ -95,4 +95,4 @@ return (void*)code;                        // a0 posle ecall-a = rezultat
 2. kako handleSupervisorTrap "magijski" dobija abi argumente kao c parametre?
 3. razlika `sret` i `ret`?
 4. sta bi se desilo bez `sepc += 4` kod ecall-a? a sta ako bismo ga radili kod prekida?
-5. zasto se `a0` ne cuva/ne restaurira u supervisorTrap.S kao ostali registri?
+5. zasto se `a0` ne cuva/ne restaurira u trap.S kao ostali registri?

@@ -96,11 +96,11 @@ inline void Riscv::w_stvec(uint64 stvec) {
     asm volatile("csrw stvec, %0" : : "r"(stvec));
 }
 
-// ulazna tacka prekidne rutine (supervisorTrap.S) - ide u stvec
-extern "C" void supervisorTrap();
+// ulazna tacka prekidne rutine (trap.S) - ide u stvec
+extern "C" void trap();
 
 // c deo prekidne rutine: cita scause i grana se na obradu.
-// a0..a4 se poklapaju sa registrima u trenutku trapa (supervisorTrap.S ih
+// a0..a4 se poklapaju sa registrima u trenutku trapa (trap.S ih
 // ne dira pre call-a); povratna vrednost se vraca korisniku kroz a0
 extern "C" uint64 handleSupervisorTrap(uint64 a0, uint64 a1, uint64 a2, uint64 a3, uint64 a4);
 

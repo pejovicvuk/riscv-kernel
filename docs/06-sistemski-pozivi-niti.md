@@ -42,13 +42,13 @@ jezgro upise rucku kroz `*(TCB**)a1 = tcb`.
 [c api]      mem_alloc(DEFAULT_STACK_SIZE)  -> ecall 0x01 -> stek za novu nit
 [c api]      a0=0x11, a1=&a, a2=workerA, a3=0, a4=stek -> ecall
 [hardver]    sepc/scause/sstatus, skok na stvec
-[supervisorTrap.S]     sacuvaj 15 registara na stek POZIVAOCA
+[trap.S]     sacuvaj 15 registara na stek POZIVAOCA
 [handleSupervisorTrap] case 0x11: TCB::createThread(workerA, 0, stek)
 [jezgro]     new TCB (operator new -> MemoryAllocator, BEZ ecall-a!)
              falsifikat: ra=threadWrapper, sp=vrh steka-96 (12 nula)
              Scheduler::put -> nit ceka u redu (jos NIJE dobila procesor!)
 [handleSupervisorTrap] *(TCB**)a1 = tcb  (rucka korisniku), ret=0
-[supervisorTrap.S]     vrati registre, sret
+[trap.S]     vrati registre, sret
 [c api]      vrati 0 korisniku. nova nit ce PRVI PUT raditi tek kad je
              neciji dispatch izvuce iz reda.
 ```

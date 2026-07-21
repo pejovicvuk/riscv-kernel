@@ -7,8 +7,8 @@
 # handleSupervisorTrap ako ih koristi.
 
 .align 4
-.global supervisorTrap
-supervisorTrap:
+.global trap
+trap:
     addi sp, sp, -128      # 15 registara x 8B = 120, zaokruzeno na 128 (sp deljiv sa 16)
     sd ra, 0(sp)
     sd t0, 8(sp)

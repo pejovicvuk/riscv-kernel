@@ -8,7 +8,7 @@
 
 // zajednicki c deo prekidne rutine: cita scause i grana se na obradu.
 // a0..a4 parametri se poklapaju sa registrima a0..a4 u trenutku trapa
-// (supervisorTrap.S ih ne dira pre call-a), pa abi argumente citamo direktno.
+// (trap.S ih ne dira pre call-a), pa abi argumente citamo direktno.
 extern "C" uint64 handleSupervisorTrap(uint64 a0, uint64 a1, uint64 a2, uint64 a3, uint64 a4) {
     uint64 cause   = Riscv::r_scause();
     uint64 sepc    = Riscv::r_sepc();

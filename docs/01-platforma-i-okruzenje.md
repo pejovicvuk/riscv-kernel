@@ -31,7 +31,7 @@ hw.lib (pristup hardveru)      <- daje fakultet
 
 ## dve infrastrukturne zamke (vec su nas ujedale)
 
-1. **mac mount je case-insensitive**: `supervisorTrap.S` i `trap.s` su isti fajl!
+1. **mac mount je case-insensitive**: `trap.S` i `trap.s` su isti fajl!
    gnu make je pravio `.s` medjufajl iz `.S` i pri ciscenju gazio original.
    resenje: pravilo u Makefile koje pravi `.o` direktno iz `.S` (uvlacenje mora biti tab):
    ```

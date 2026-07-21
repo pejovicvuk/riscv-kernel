@@ -67,7 +67,7 @@ preotme i nit koja ceka u __getc, pa cifre teku kontinualno.
 - test 1: 4 niti (A,B,C,D) se smenjuju uz ogromne busy-wait petlje.
   najzanimljivije: nit C uradi `li t1, 7`, pa thread_dispatch, pa PROVERI
   da li je t1 preziveo promenu konteksta! ovo testira cuvanje t-registara
-  po niti - tacno ono sto nas supervisorTrap.S radi (t/a/ra na stek niti pri trapu).
+  po niti - tacno ono sto nas trap.S radi (t/a/ra na stek niti pri trapu).
   slicno i D sa `li t1, 5` - dve niti, ISTI registar, razlicite vrednosti.
 - test 7: nit B na i==10 izvrsi `csrr t6, sepc` - u u-modu to je ilegalna
   instrukcija -> panika -> nema regularnog kraja == PROLAZ. poruka

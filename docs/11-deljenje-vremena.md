@@ -19,7 +19,7 @@ bez njenog znanja i pristanka. to je asinhrona promena konteksta.
 
 1. nit radi bilo sta (u-mode; ili ceka u __getc u s-modu - i to se
    prekida, jer __getc pusta prekide dok ceka)
-2. tajmerski otkucaj -> trap -> supervisorTrap.S sacuva registre na
+2. tajmerski otkucaj -> trap -> trap.S sacuva registre na
    stek niti -> handleSupervisorTrap, grana code==1
 3. `Riscv::mc_sip(SIP_SSIP)` - potvrdi prijem (PRE eventualne promene
    niti - inace bi zahtev ostao da visi)
@@ -55,7 +55,7 @@ inicijalizacije je deo dizajna, ne kozmetika!
 
 ## zasto nas trap okvir ovo izdrzava bez izmena
 
-- supervisorTrap.S cuva t-registre: kod asinhronog prekida oni su "zivi"
+- trap.S cuva t-registre: kod asinhronog prekida oni su "zivi"
   u prekinutom kodu (pdf str. 23-24) - test 1 (t1=7) i dalje prolazi
 - a0 prekinutog koda se vraca kroz `ret = a0` (za prekide handler vraca
   zateceni a0, pa ga sret-put vrati netaknut)

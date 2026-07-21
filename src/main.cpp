@@ -20,7 +20,7 @@ int main() {
     kputs(">> kernel: starting\n");
 
     // stvec = adresa prekidne rutine: jedina kapija za ecall/izuzetke/prekide
-    Riscv::w_stvec((uint64)&supervisorTrap);
+    Riscv::w_stvec((uint64)&trap);
 
     MemoryAllocator::init();
 

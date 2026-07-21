@@ -71,7 +71,7 @@ handler za c=2 ne pomera sepc -> ista adresa -> a konzola vec ceka -> 9,2,9,2...
 1. **prekidna rutina MORA da sacuva caller-saved registre** (ra, t0-t6, a1-a7):
    c funkcija ih po konvenciji sme pokvariti, a prekinuti kod (koga je prekid
    PRESEKAO usred posla, nije nikog "pozvao") racuna da su netaknuti.
-   zato supervisorTrap.S sada spusta 15 registara na stek pre call-a i vraca ih posle.
+   zato trap.S sada spusta 15 registara na stek pre call-a i vraca ih posle.
    (s0-s11 ne: njih cuva sam handleSupervisorTrap svojim prologom/epilogom, po konvenciji.)
 2. **privilegovane instrukcije stite jezgro**: sret/csr iz korisnickog rezima =
    ilegalna instrukcija. da nije tako, korisnicki program bi mogao sam sebe da

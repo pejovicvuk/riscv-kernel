@@ -43,10 +43,12 @@ na koja treba znati odgovor.
   stub do zadatka 4. TIME JE SEKCIJA OD 20 POENA KOMPLETNO OVERENA
   (testovi 1, 2, 3, 4 i 7 svi prolaze)
 - preimenovanje na skolske konvencije (2026-07-21, projektna odluka):
-  trap.S -> supervisorTrap.S; trapHandlers.cpp -> riscv.cpp + klasa Riscv
+  trapHandlers.cpp -> riscv.cpp + klasa Riscv
   (csr helperi r_/w_/ms_/mc_ umesto sirovih asm blokova); handleTrap ->
   handleSupervisorTrap; newdelete.cpp -> _new.cpp (SCB je probano kao
-  _sem pa VRACENO na SCB - studentova odluka). logika NIJE menjana;
+  _sem pa VRACENO na SCB; trap.S je probano kao supervisorTrap.S pa
+  VRACENO na trap.S, ulazna labela je sada `trap` - studentove odluke).
+  logika NIJE menjana;
   unutrasnjost TCB-a (switchToNext, reapZombie, userWrapper, systemLevel)
   namerno zadrzana nasa - to su nase projektne odluke
 - DELJENJE VREMENA (2026-07-21, odluka studenta - obim kao kolegin
