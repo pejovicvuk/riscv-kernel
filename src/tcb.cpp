@@ -102,7 +102,7 @@ void TCB::switchToNext() {
     TCB* next = Scheduler::get();
     if (!next) {
         // nema nijedne spremne niti: sistem nema sta da radi (moguc i deadlock)
-        kputs("PANIC: nema spremnih niti\n");
+        kputs("nema spremnih niti\n");
         *(volatile int*)0x100000 = 0x5555;
     }
 

@@ -111,9 +111,8 @@ extern "C" uint64 handleSupervisorTrap(uint64 a0, uint64 a1, uint64 a2, uint64 a
     else {
         // nepoznat uzrok (izuzetak koji ne umemo da obradimo): panika.
         // ne vracamo se - sepc bi pokazivao na istu instrukciju i vrteli bismo se.
-        kputs("PANIC: cause="); kputhex(cause);
-        kputs(" sepc=");        kputhex(sepc);
-        kputs("\n");
+
+        kputs("emulator pukao\n");
         *(volatile int*)0x100000 = 0x5555;   // halt emulatora
     }
 
