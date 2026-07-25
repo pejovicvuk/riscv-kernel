@@ -24,8 +24,11 @@
 #include "../test/ConsumerProducer_CPP_Sync_API_test.hpp"
 #endif
 
+// TEST 8 (nas test: ping-pong semafori + oba nacina pravljenja niti)
+#include "../test/myTest.hpp"
+
 void userMain() {
-    printString("Unesite broj testa? [1-7]\n");
+    printString("Unesite broj testa? [1-8]\n");
     int test = getc() - '0';
     getc(); // enter posle broja
 
@@ -81,6 +84,10 @@ void userMain() {
             printString("Test se nije uspesno zavrsio\n");
             printString("TEST 7 (zadatak 2., testiranje da li se korisnicki kod izvrsava u korisnickom rezimu)\n");
 #endif
+            break;
+        case 8:
+            my_test();
+            printString("TEST 8 (ping-pong semafori + oba nacina pravljenja niti)\n");
             break;
         default:
             printString("Niste uneli odgovarajuci broj za test\n");
