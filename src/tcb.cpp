@@ -1,9 +1,9 @@
-#include "../h/tcb.hpp"
-#include "../h/scheduler.hpp"
-#include "../h/memoryAllocator.hpp"
-#include "../h/print.hpp"
-#include "../h/riscv.hpp"
-#include "../h/syscall_c.h"   // za thread_exit iz userWrapper-a (u-mode deo)
+#include "../inc/tcb.hpp"
+#include "../inc/scheduler.hpp"
+#include "../inc/memoryAllocator.hpp"
+#include "../inc/print.hpp"
+#include "../inc/riscv.hpp"
+#include "../inc/syscall_c.h"   // za thread_exit iz userWrapper-a (u-mode deo)
 
 // asemblerska rutina iz contextSwitch.S
 extern "C" void contextSwitch(TCB::Context* oldCtx, TCB::Context* newCtx);

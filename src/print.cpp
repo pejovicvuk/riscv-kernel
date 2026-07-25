@@ -1,4 +1,4 @@
-#include "../h/print.hpp"
+#include "../inc/print.hpp"
 
 // posalji jedan znak kontroleru konzole (polling)
 void kputc(char c) {

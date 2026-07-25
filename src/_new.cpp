@@ -5,7 +5,7 @@
 // paznja: jezgro NE SME da koristi ove operatore (ecall iz jezgra bi
 // pregazio sepc tekuceg trapa) - zato klase jezgra (TCB, SCB) imaju
 // svoje operator new/delete koji idu direktno na MemoryAllocator.
-#include "../h/syscall_c.h"
+#include "../inc/syscall_c.h"
 
 void* operator new(size_t size) {
     return mem_alloc(size);

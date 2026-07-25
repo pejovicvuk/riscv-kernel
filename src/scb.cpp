@@ -1,7 +1,7 @@
-#include "../h/scb.hpp"
-#include "../h/tcb.hpp"
-#include "../h/scheduler.hpp"
-#include "../h/memoryAllocator.hpp"
+#include "../inc/scb.hpp"
+#include "../inc/tcb.hpp"
+#include "../inc/scheduler.hpp"
+#include "../inc/memoryAllocator.hpp"
 
 void* SCB::operator new(size_t size) {
     return MemoryAllocator::alloc(size);

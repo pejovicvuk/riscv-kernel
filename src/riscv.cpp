@@ -1,10 +1,10 @@
-#include "../h/riscv.hpp"
+#include "../inc/riscv.hpp"
 #include "../lib/hw.h"
 #include "../lib/console.h"   // __getc/__putc/console_handler (console.lib, pdf str. 31)
-#include "../h/print.hpp"
-#include "../h/memoryAllocator.hpp"
-#include "../h/tcb.hpp"
-#include "../h/scb.hpp"
+#include "../inc/print.hpp"
+#include "../inc/memoryAllocator.hpp"
+#include "../inc/tcb.hpp"
+#include "../inc/scb.hpp"
 
 // zajednicki c deo prekidne rutine: cita scause i grana se na obradu.
 // a0..a4 parametri se poklapaju sa registrima a0..a4 u trenutku trapa

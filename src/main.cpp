@@ -1,8 +1,8 @@
-#include "../h/print.hpp"
-#include "../h/memoryAllocator.hpp"
-#include "../h/tcb.hpp"
-#include "../h/riscv.hpp"
-#include "../h/syscall_c.h"
+#include "../inc/print.hpp"
+#include "../inc/memoryAllocator.hpp"
+#include "../inc/tcb.hpp"
+#include "../inc/riscv.hpp"
+#include "../inc/syscall_c.h"
 
 void userMain();   // definisana u test fajlu
 

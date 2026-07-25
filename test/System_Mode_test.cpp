@@ -1,5 +1,5 @@
 
-#include "../h/syscall_c.h"
+#include "../inc/syscall_c.h"
 
 #include "printing.hpp"
 

@@ -1,5 +1,5 @@
-#include "../h/scheduler.hpp"
-#include "../h/tcb.hpp"
+#include "../inc/scheduler.hpp"
+#include "../inc/tcb.hpp"
 
 TCB* Scheduler::head = nullptr;
 TCB* Scheduler::tail = nullptr;

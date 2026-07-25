@@ -1,5 +1,5 @@
-#include "../h/memoryAllocator.hpp"
-#include "../h/print.hpp"
+#include "../inc/memoryAllocator.hpp"
+#include "../inc/print.hpp"
 #include "../lib/hw.h"
 
 MemoryAllocator::FreeBlock* MemoryAllocator::freeListHead = nullptr;

@@ -1,6 +1,6 @@
 // implementacija c++ api-ja: svaka metoda je tanak omotac oko
 // odgovarajuceg c api poziva (koji dalje ide ecall-om u jezgro)
-#include "../h/syscall_cpp.hpp"
+#include "../inc/syscall_cpp.hpp"
 
 // ---------- Thread ----------
 

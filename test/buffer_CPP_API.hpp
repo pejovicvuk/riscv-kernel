@@ -1,7 +1,7 @@
 #ifndef OS1_BUFFERCPP_H
 #define OS1_BUFFERCPP_H
 
-#include "../h/syscall_cpp.hpp"
+#include "../inc/syscall_cpp.hpp"
 #include "printing.hpp"
 
 class BufferCPP {

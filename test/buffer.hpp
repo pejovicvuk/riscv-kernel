@@ -5,7 +5,7 @@
 #ifndef OS1_BUFFER_CPP_H
 #define OS1_BUFFER_CPP_H
 
-#include "../h/syscall_c.h"
+#include "../inc/syscall_c.h"
 #include "printing.hpp"
 
 class Buffer {
