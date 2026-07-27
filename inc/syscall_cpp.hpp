@@ -13,7 +13,7 @@ void  operator delete(void* ptr) noexcept;
 
 class Thread {
 public:
-    Thread(void (*body)(void*), void* arg);
+    Thread(void (*body)(void*), void* arg, int priority = DEFAULT_PRIORITY);
     virtual ~Thread();
 
     int start();
@@ -28,6 +28,7 @@ protected:
 private:
     thread_t myHandle;
     void (*body)(void*); void* arg;
+    int priority;   // prioritet OVE niti (podrazumevano DEFAULT_PRIORITY)
 
     // telo koje jezgro stvarno pokrece: dobija this, pa bira body ili run()
     // (pdf str. 11: ako je konstruktorom dat pokazivac na funkciju, run se ignorise)

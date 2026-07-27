@@ -6,11 +6,11 @@
 
 // javni konstruktor: nit sa pokazivacem na funkciju - pamti body i arg,
 // nit jos NE postoji u jezgru (nastaje tek u start)
-Thread::Thread(void (*body)(void*), void* arg)
-    : myHandle(nullptr), body(body), arg(arg) {}
+Thread::Thread(void (*body)(void*), void* arg, int priority)
+    : myHandle(nullptr), body(body), arg(arg), priority(priority) {}
 
 // zasticeni konstruktor: za izvedene klase koje redefinisu run()
-Thread::Thread() : myHandle(nullptr), body(nullptr), arg(nullptr) {}
+Thread::Thread() : myHandle(nullptr), body(nullptr), arg(nullptr), priority(3) {}
 
 // destruktor ne radi nista: jezgro samo oslobadja stek i tcb
 // kad nit zavrsi (zombi mehanizam), a c api nema thread_delete
@@ -19,7 +19,7 @@ Thread::~Thread() {}
 // tek ovde jezgro pravi nit; kao telo se uvek salje runWrapper sa this,
 // pa se odluka body-ili-run donosi kad nit prvi put dobije procesor
 int Thread::start() {
-    return thread_create(&myHandle, runWrapper, this);
+    return thread_create(&myHandle, runWrapper, this, priority);
 }
 
 // pdf str. 11: ako je konstruktorom postavljen pokazivac na funkciju,

@@ -9,7 +9,7 @@
 // zajednicki c deo prekidne rutine: cita scause i grana se na obradu.
 // a0..a4 parametri se poklapaju sa registrima a0..a4 u trenutku trapa
 // (trap.S ih ne dira pre call-a), pa abi argumente citamo direktno.
-extern "C" uint64 handleSupervisorTrap(uint64 a0, uint64 a1, uint64 a2, uint64 a3, uint64 a4) {
+extern "C" uint64 handleSupervisorTrap(uint64 a0, uint64 a1, uint64 a2, uint64 a3, uint64 a4, uint64 a5) {
     uint64 cause   = Riscv::r_scause();
     uint64 sepc    = Riscv::r_sepc();
     uint64 sstatus = Riscv::r_sstatus();
@@ -56,7 +56,7 @@ extern "C" uint64 handleSupervisorTrap(uint64 a0, uint64 a1, uint64 a2, uint64 a
                 break;
             case 0x11: { // thread_create(handle, telo, arg, stek)
                 // niti nastale kroz syscall su korisnicke: telo u u-modu
-                TCB* tcb = TCB::createThread((TCB::Body)a2, (void*)a3, (void*)a4, false);
+                TCB* tcb = TCB::createThread((TCB::Body)a2, (void*)a3, (void*)a4, false, (int)a5);
                 if (tcb) { *(TCB**)a1 = tcb; ret = 0; }
                 else     { ret = (uint64)-1; }
                 break;

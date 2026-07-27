@@ -102,6 +102,6 @@ extern "C" void trap();
 // c deo prekidne rutine: cita scause i grana se na obradu.
 // a0..a4 se poklapaju sa registrima u trenutku trapa (trap.S ih
 // ne dira pre call-a); povratna vrednost se vraca korisniku kroz a0
-extern "C" uint64 handleSupervisorTrap(uint64 a0, uint64 a1, uint64 a2, uint64 a3, uint64 a4);
+extern "C" uint64 handleSupervisorTrap(uint64 a0, uint64 a1, uint64 a2, uint64 a3, uint64 a4, uint64 a5);
 
 #endif // _riscv_hpp_

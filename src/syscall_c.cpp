@@ -30,7 +30,7 @@ int mem_free(void* ptr) {
     return (int)code;   // 0 = uspeh, negativno = greska
 }
 
-int thread_create(thread_t* handle, void (*start_routine)(void*), void* arg) {
+int thread_create(thread_t* handle, void (*start_routine)(void*), void* arg, int priority) {
     if (!handle || !start_routine) return -1;
 
     // pdf, abi poziv 0x11: stek niti alocira OVAJ sloj (kroz mem_alloc,
@@ -43,9 +43,10 @@ int thread_create(thread_t* handle, void (*start_routine)(void*), void* arg) {
     register uint64 rt   asm("a2") = (uint64)start_routine;
     register uint64 ag   asm("a3") = (uint64)arg;
     register uint64 st   asm("a4") = (uint64)stackSpace;
+    register uint64 pr   asm("a5") = (uint64)priority;
     asm volatile("ecall"
         : "=r"(code)
-        : "r"(code), "r"(h), "r"(rt), "r"(ag), "r"(st)
+        : "r"(code), "r"(h), "r"(rt), "r"(ag), "r"(st), "r"(pr)
         : "memory");
 
     int result = (int)code;

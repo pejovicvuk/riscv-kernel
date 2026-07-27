@@ -2,7 +2,7 @@
 #define _tcb_hpp_
 
 #include "../lib/hw.h"
-
+#include "syscall_c.h"
 // tcb (thread control block) = "licna karta" jedne niti:
 // sve sto jezgro mora da zna o niti da bi mogla da se pauzira i nastavi
 class TCB {
@@ -23,7 +23,7 @@ public:
     // (ako ima telo) ubaci nit u red spremnih.
     // systemLevel: true samo za interne niti jezgra (telo ostaje u s-modu);
     // korisnicke niti (preko syscall-a 0x11) idu sa false - telo u u-modu
-    static TCB* createThread(Body body, void* arg, void* stackSpace, bool systemLevel);
+    static TCB* createThread(Body body, void* arg, void* stackSpace, bool systemLevel, int priority = DEFAULT_PRIORITY);
 
     // sinhrona promena konteksta: tekuca nit ustupa procesor sledecoj iz reda
     static void dispatch();
@@ -45,7 +45,7 @@ public:
     void operator delete(void* ptr);
 
 private:
-    TCB(Body body, void* arg, uint64* stack, bool systemLevel);
+    TCB(Body body, void* arg, uint64* stack, bool systemLevel, int priority);
 
     // omotac tela niti, s-mode deo: prva funkcija u zivotu svake niti.
     // internim nitima jezgra odmah pozove telo; korisnicke niti SPUSTA
@@ -79,6 +79,7 @@ private:
     Context context;  // zamrznuta slika (vazi samo dok nit ne radi)
     bool finished;    // da li je nit zavrsila
     bool systemLevel; // true = interna nit jezgra (telo radi u s-modu)
+    int priority;     // prioritet OVE niti (podrazumevano DEFAULT_PRIORITY)
     time_t timeSlice; // kvantum OVE niti (podrazumevano DEFAULT_TIME_SLICE)
     TCB* next;        // ulancavanje u TACNO JEDAN red u datom trenutku:
                       // ili Scheduler (spremna) ili red jednog semafora

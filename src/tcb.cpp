@@ -20,10 +20,10 @@ void TCB::operator delete(void* ptr) {
     MemoryAllocator::free(ptr);
 }
 
-TCB::TCB(Body body, void* arg, uint64* stack, bool systemLevel)
+TCB::TCB(Body body, void* arg, uint64* stack, bool systemLevel, int priority)
     : body(body), arg(arg), stack(stack),
       context({0, 0}),
-      finished(false), systemLevel(systemLevel),
+      finished(false), systemLevel(systemLevel), priority(priority),
       timeSlice(DEFAULT_TIME_SLICE), next(nullptr),
       blockResult(0), pendingN(1)
 {}
@@ -71,11 +71,11 @@ void TCB::userWrapper() {
     for (;;) {}         // nedostizno; osiguranje da se nikad ne "ispadne"
 }
 
-TCB* TCB::createThread(Body body, void* arg, void* stackSpace, bool systemLevel) {
+TCB* TCB::createThread(Body body, void* arg, void* stackSpace, bool systemLevel, int priority) {
     // prava nit bez steka ne moze da postoji
     if (body && !stackSpace) return nullptr;
 
-    TCB* tcb = new TCB(body, arg, (uint64*)stackSpace, systemLevel);
+    TCB* tcb = new TCB(body, arg, (uint64*)stackSpace, systemLevel, priority);
     if (!tcb) return nullptr;
 
     if (body) {

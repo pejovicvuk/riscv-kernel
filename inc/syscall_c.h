@@ -2,7 +2,7 @@
 #define _syscall_c_h_
 
 #include "../lib/hw.h"
-
+#define DEFAULT_PRIORITY 3
 // c api jezgra (potpisi iz postavke projekta).
 // ime fajla je syscall_c.h (ne .hpp) jer ga zvanicni testovi tako include-uju.
 
@@ -14,7 +14,7 @@ int mem_free(void*);
 class _thread;
 typedef _thread* thread_t;
 
-int  thread_create(thread_t* handle, void (*start_routine)(void*), void* arg);
+int  thread_create(thread_t* handle, void (*start_routine)(void*), void* arg, int priority = DEFAULT_PRIORITY);
 int  thread_exit();
 void thread_dispatch();
 
