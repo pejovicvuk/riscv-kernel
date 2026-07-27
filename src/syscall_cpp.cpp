@@ -10,7 +10,7 @@ Thread::Thread(void (*body)(void*), void* arg, int priority)
     : myHandle(nullptr), body(body), arg(arg), priority(priority) {}
 
 // zasticeni konstruktor: za izvedene klase koje redefinisu run()
-Thread::Thread() : myHandle(nullptr), body(nullptr), arg(nullptr), priority(3) {}
+Thread::Thread() : myHandle(nullptr), body(nullptr), arg(nullptr), priority(DEFAULT_PRIORITY) {}
 
 // destruktor ne radi nista: jezgro samo oslobadja stek i tcb
 // kad nit zavrsi (zombi mehanizam), a c api nema thread_delete
