@@ -122,3 +122,20 @@ void putc(char c) {
     register uint64 ch   asm("a1") = (uint64)c;
     asm volatile("ecall" : "=r"(code) : "r"(code), "r"(ch) : "memory");
 }
+
+int send(thread_t receiver, int message){
+    if  (!receiver) return -1;
+    register uint64 code asm("a0") = 0x51;
+    register uint64 rec asm("a1") = (uint64)receiver;
+    register uint64 msg asm("a2") = (uint64)message;
+    asm volatile("ecall" : "=r"(code) : "r"(code), "r"(rec), "r"(msg) : "memory");
+    return (int)code;
+}
+int receive(int* message){
+    if  (!message) return -1;
+    register uint64 code asm("a0") = 0x52;
+    register uint64 msg asm("a1") = (uint64)message;
+    asm volatile("ecall" : "=r"(code) : "r"(code), "r"(msg) : "memory");
+    return (int)code;
+
+}

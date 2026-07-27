@@ -28,6 +28,8 @@ int sem_wait(sem_t id);
 int sem_signal(sem_t id);
 int sem_wait_n(sem_t id, unsigned n);
 int sem_signal_n(sem_t id, unsigned n);
+int send(thread_t receiver, int message);
+int receive(int* message);
 
 // konzola
 const int EOF = -1;

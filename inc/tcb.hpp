@@ -5,6 +5,7 @@
 #include "syscall_c.h"
 // tcb (thread control block) = "licna karta" jedne niti:
 // sve sto jezgro mora da zna o niti da bi mogla da se pauzira i nastavi
+class SCB;
 class TCB {
 public:
     typedef void (*Body)(void*);   // tip za telo niti: funkcija koja prima void*
@@ -43,6 +44,9 @@ public:
     // isti obrazac ima i SCB
     void* operator new(size_t size);
     void operator delete(void* ptr);
+
+    static int send(TCB* receiver, int message);
+    static int receive(int* message);
 
 private:
     TCB(Body body, void* arg, uint64* stack, bool systemLevel, int priority);
@@ -86,6 +90,12 @@ private:
                       // (blokirana) - nikad oba, pa je jedan pokazivac dovoljan
     int blockResult;  // ishod cekanja na semaforu: 0 ok, negativno = zatvoren
     uint64 pendingN;  // koliko jedinica semafora nit ceka (sem_wait_n)
+
+    SCB* msgSemaphore;
+    int messages[10];
+    int msgCount;
+    int msgHead;
+    int msgTail;
 
     friend class Scheduler;   // Scheduler sme da koristi next za svoj red
     friend class SCB;         // semafor blokira/ulancava niti u svoj red

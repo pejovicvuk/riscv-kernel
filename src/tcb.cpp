@@ -4,6 +4,7 @@
 #include "../inc/print.hpp"
 #include "../inc/riscv.hpp"
 #include "../inc/syscall_c.h"   // za thread_exit iz userWrapper-a (u-mode deo)
+#include "../inc/scb.hpp"
 
 // asemblerska rutina iz contextSwitch.S
 extern "C" void contextSwitch(TCB::Context* oldCtx, TCB::Context* newCtx);
@@ -25,7 +26,7 @@ TCB::TCB(Body body, void* arg, uint64* stack, bool systemLevel, int priority)
       context({0, 0}),
       finished(false), systemLevel(systemLevel), priority(priority),
       timeSlice(DEFAULT_TIME_SLICE), next(nullptr),
-      blockResult(0), pendingN(1)
+      blockResult(0), pendingN(1), messages{}, msgCount(0), msgHead(0), msgTail(0)
 {}
 
 // otkucaj tajmera: kvantum tekuce niti curi; kad iscuri - preotimanje.
@@ -39,6 +40,7 @@ bool TCB::tick() {
 void TCB::reapZombie() {
     if (!zombie) return;
     if (zombie->stack) MemoryAllocator::free(zombie->stack);
+    delete zombie->msgSemaphore;
     delete zombie;
     zombie = nullptr;
 }
@@ -92,6 +94,9 @@ TCB* TCB::createThread(Body body, void* arg, void* stackSpace, bool systemLevel,
     }
     // nulta nit (body == nullptr, main): bez steka i bez reda - njen kontekst
     // ce prirodno upisati njen prvi contextSwitch
+
+    tcb->msgSemaphore = SCB::createSemaphore(0);
+
     return tcb;
 }
 
@@ -119,4 +124,22 @@ void TCB::dispatch() {
     if (!running->finished) Scheduler::put(running);
     else zombie = running;   // jos stojimo na njegovom steku - ciscenje kasnije!
     switchToNext();
+}
+
+int TCB::send(TCB* receiver, int message){
+    if (receiver->msgCount >= 10) {
+        return -1; // queue is full
+    }
+    receiver->messages[receiver->msgTail] = message;
+    receiver->msgTail = (receiver->msgTail + 1) % 10;
+    receiver->msgCount++;
+    receiver->msgSemaphore->signal(1);
+    return 0;
+}
+int TCB::receive(int* message){
+    TCB::running->msgSemaphore->wait(1);
+    *message = TCB::running->messages[TCB::running->msgHead];
+    TCB::running->msgHead = (TCB::running->msgHead + 1) % 10;
+    TCB::running->msgCount--;
+    return 0;
 }
