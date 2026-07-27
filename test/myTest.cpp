@@ -1,52 +1,55 @@
 #include "../inc/syscall_cpp.hpp"
 #include "printing.hpp"
 
-static Semaphore *semA, *semB, *done;
+unsigned static seed = 0;
 
-class PingWorkerA: public Thread {
-    void workerBodyA(void* arg);
-public:
-    PingWorkerA():Thread() {}
-
-    void run() override {
-        workerBodyA(nullptr);
-    }
-};
-
-void PingWorkerA::workerBodyA(void *arg){
-    for (int i = 0; i < 10; i++) {
-        semA->wait();
-        printString("A: i="); printInt(i); printString("\n");
-        semB->signal();
-    }
-    done->signal();   // javi da je nit A zavrsila
+static int random(){
+    ++seed;
+    seed = (seed * 1103515245 + 12345) % 2147483648;
+    return (seed >> 16) % 20;
 }
 
-static void pingBodyB(void *arg){
-    for (int i = 0; i < 10; i++) {
-        semB->wait();
-        printString("B: i="); printInt(i); printString("\n");
-        semA->signal();
+static int matrix[10][10];
+
+static void populate_matrix(int matrix[10][10]){
+    for(int i = 0; i < 10; i++){
+        for(int j = 0; j < 10; j++){
+            matrix[i][j] = random();
+        }
     }
-    done->signal();   // javi da je nit B zavrsila
+}
+static int counter[10];
+
+static Semaphore* done;
+
+static Thread* threads[10];
+static void countBody(void* arg){
+    int num = (int)(uint64)arg;
+    for (int i = 0; i < 10; i++){
+        for(int j = 0; j < 10; j++){
+            if(matrix[i][j] % 10 == num){
+                counter[num]++;
+            }
+        }
+    }
+    done->signal();
 }
 
-void my_test() {
-    // 1. semafori
-    semA = new Semaphore(1);
-    semB = new Semaphore(0);
+void my_test(){
     done = new Semaphore(0);
-
-    // 2. radnici
-    PingWorkerA a;
-    Thread b(pingBodyB, nullptr);
-    a.start();
-    b.start();
-
-    // 3. cekaj oba (dva wait-a, nikakva petlja)
-    done->wait();
-    done->wait();
-
-    // 4. pospremi
-    delete semA; delete semB; delete done;
+    populate_matrix(matrix);
+    for(int i = 0; i < 10; i++){
+        threads[i] = new Thread(countBody, (void*)(uint64)i);
+        threads[i]->start();
+    }
+    for(int i = 0; i < 10; i++){
+        done->wait();
+    }
+    for (int i = 0; i < 10; i++){
+        printString("Number of ");
+        printInt(i);
+        printString("'s: ");
+        printInt(counter[i]);
+        printString("\n");
+    }
 }
