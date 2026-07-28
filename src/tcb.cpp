@@ -4,6 +4,7 @@
 #include "../inc/print.hpp"
 #include "../inc/riscv.hpp"
 #include "../inc/syscall_c.h"   // za thread_exit iz userWrapper-a (u-mode deo)
+#include "../inc/scb.hpp"
 
 // asemblerska rutina iz contextSwitch.S
 extern "C" void contextSwitch(TCB::Context* oldCtx, TCB::Context* newCtx);
@@ -25,7 +26,7 @@ TCB::TCB(Body body, void* arg, uint64* stack, bool systemLevel)
       context({0, 0}),
       finished(false), systemLevel(systemLevel),
       timeSlice(DEFAULT_TIME_SLICE), next(nullptr),
-      blockResult(0), pendingN(1)
+      blockResult(0), pendingN(1), liveDescendants(0), parent(nullptr), waitForChildren(nullptr), waitingJoin(false)
 {}
 
 // otkucaj tajmera: kvantum tekuce niti curi; kad iscuri - preotimanje.
@@ -39,6 +40,7 @@ bool TCB::tick() {
 void TCB::reapZombie() {
     if (!zombie) return;
     if (zombie->stack) MemoryAllocator::free(zombie->stack);
+    delete zombie->waitForChildren;
     delete zombie;
     zombie = nullptr;
 }
@@ -77,6 +79,10 @@ TCB* TCB::createThread(Body body, void* arg, void* stackSpace, bool systemLevel)
 
     TCB* tcb = new TCB(body, arg, (uint64*)stackSpace, systemLevel);
     if (!tcb) return nullptr;
+
+    tcb->waitForChildren = SCB::createSemaphore(0);
+    tcb->parent = running;
+    if (tcb->parent) tcb->parent->liveDescendants++;
 
     if (body) {
         // bootstrap: falsifikuj proslost niti da izgleda kao da je "zaspala"
@@ -117,6 +123,22 @@ void TCB::switchToNext() {
 // sinhrona promena konteksta: tekuca nit ustupa procesor
 void TCB::dispatch() {
     if (!running->finished) Scheduler::put(running);
-    else zombie = running;   // jos stojimo na njegovom steku - ciscenje kasnije!
+    else{
+        zombie = running;   // jos stojimo na njegovom steku - ciscenje kasnije!
+        if (running->parent){
+            running->parent->liveDescendants--;
+            if (running->parent->liveDescendants == 0 && running->parent->waitingJoin){
+                running->parent->waitForChildren->signal(1);
+            }
+        }
+    } 
     switchToNext();
+}
+void TCB::joinAll(){
+    if (running->liveDescendants == 0){
+        return;
+    }
+    running->waitingJoin = true;
+    running->waitForChildren->wait(1);
+    running->waitingJoin = false;
 }

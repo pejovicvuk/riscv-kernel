@@ -1,52 +1,31 @@
+// test za joinAll: stablo A(my_test) -> B -> C.
+// pravilo (nasa pretpostavka): nit sa potomcima zove join_all pre kraja.
 #include "../inc/syscall_cpp.hpp"
+#include "../inc/syscall_c.h"
 #include "printing.hpp"
 
-static Semaphore *semA, *semB, *done;
-
-class PingWorkerA: public Thread {
-    void workerBodyA(void* arg);
-public:
-    PingWorkerA():Thread() {}
-
-    void run() override {
-        workerBodyA(nullptr);
-    }
-};
-
-void PingWorkerA::workerBodyA(void *arg){
-    for (int i = 0; i < 10; i++) {
-        semA->wait();
-        printString("A: i="); printInt(i); printString("\n");
-        semB->signal();
-    }
-    done->signal();   // javi da je nit A zavrsila
+// unuk: samo radi svoj posao
+static void cTelo(void* arg){
+    printString("C: pocinjem\n");
+    for (volatile int i = 0; i < 1000000; i++);
+    printString("C: zavrsio\n");
 }
 
-static void pingBodyB(void *arg){
-    for (int i = 0; i < 10; i++) {
-        semB->wait();
-        printString("B: i="); printInt(i); printString("\n");
-        semA->signal();
-    }
-    done->signal();   // javi da je nit B zavrsila
+// dete: napravi unuka, pa po pravilu saceka SVOJE potomke
+static void bTelo(void* arg){
+    printString("B: pravim C\n");
+    thread_t c;
+    thread_create(&c, cTelo, nullptr);
+
+    join_all();
+    printString("B: svi moji potomci gotovi\n");
 }
 
 void my_test() {
-    // 1. semafori
-    semA = new Semaphore(1);
-    semB = new Semaphore(0);
-    done = new Semaphore(0);
+    printString("test: pravim B\n");
+    thread_t b;
+    thread_create(&b, bTelo, nullptr);
 
-    // 2. radnici
-    PingWorkerA a;
-    Thread b(pingBodyB, nullptr);
-    a.start();
-    b.start();
-
-    // 3. cekaj oba (dva wait-a, nikakva petlja)
-    done->wait();
-    done->wait();
-
-    // 4. pospremi
-    delete semA; delete semB; delete done;
+    join_all();
+    printString("test: SVI gotovi\n");
 }

@@ -34,4 +34,6 @@ const int EOF = -1;
 char getc();
 void putc(char);
 
+int join_all();
+
 #endif // _syscall_c_h_
