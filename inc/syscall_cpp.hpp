@@ -20,6 +20,7 @@ public:
 
     static void dispatch();
     static int  sleep(time_t);
+    void join();
 
 protected:
     Thread();

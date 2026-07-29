@@ -121,3 +121,9 @@ void putc(char c) {
     register uint64 ch   asm("a1") = (uint64)c;
     asm volatile("ecall" : "=r"(code) : "r"(code), "r"(ch) : "memory");
 }
+
+void thread_join(thread_t* handle){
+    register uint64 code asm("a0") = 0x51;
+    register uint64 h    asm("a1") = (uint64)handle;
+    asm volatile("ecall" : "=r"(code) : "r"(code), "r"(h) : "memory");
+}

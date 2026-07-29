@@ -4,6 +4,7 @@
 #include "../inc/print.hpp"
 #include "../inc/riscv.hpp"
 #include "../inc/syscall_c.h"   // za thread_exit iz userWrapper-a (u-mode deo)
+#include "../inc/scb.hpp"
 
 // asemblerska rutina iz contextSwitch.S
 extern "C" void contextSwitch(TCB::Context* oldCtx, TCB::Context* newCtx);
@@ -25,7 +26,7 @@ TCB::TCB(Body body, void* arg, uint64* stack, bool systemLevel)
       context({0, 0}),
       finished(false), systemLevel(systemLevel),
       timeSlice(DEFAULT_TIME_SLICE), next(nullptr),
-      blockResult(0), pendingN(1)
+      blockResult(0), pendingN(1), semWaiting()
 {}
 
 // otkucaj tajmera: kvantum tekuce niti curi; kad iscuri - preotimanje.
@@ -39,6 +40,7 @@ bool TCB::tick() {
 void TCB::reapZombie() {
     if (!zombie) return;
     if (zombie->stack) MemoryAllocator::free(zombie->stack);
+    delete zombie->semWaiting;
     delete zombie;
     zombie = nullptr;
 }
@@ -77,7 +79,7 @@ TCB* TCB::createThread(Body body, void* arg, void* stackSpace, bool systemLevel)
 
     TCB* tcb = new TCB(body, arg, (uint64*)stackSpace, systemLevel);
     if (!tcb) return nullptr;
-
+    tcb->semWaiting = SCB::createSemaphore(0);
     if (body) {
         // bootstrap: falsifikuj proslost niti da izgleda kao da je "zaspala"
         // na samom ulazu u threadWrapper. prvo budjenje (contextSwitch) ce:
@@ -117,6 +119,16 @@ void TCB::switchToNext() {
 // sinhrona promena konteksta: tekuca nit ustupa procesor
 void TCB::dispatch() {
     if (!running->finished) Scheduler::put(running);
-    else zombie = running;   // jos stojimo na njegovom steku - ciscenje kasnije!
+    else{
+        zombie = running;   // jos stojimo na njegovom steku - ciscenje kasnije!
+        running->semWaiting->signal(1); //signaliziram svima koji cekaju u mom semaforu da sam zavrsio
+    }
     switchToNext();
+}
+
+void TCB::threadJoin(TCB* handle){
+    if (handle->isFinished()){
+        return;
+    }
+    handle->semWaiting->wait(1);
 }

@@ -1,52 +1,51 @@
 #include "../inc/syscall_cpp.hpp"
 #include "printing.hpp"
 
-static Semaphore *semA, *semB, *done;
-
-class PingWorkerA: public Thread {
-    void workerBodyA(void* arg);
+class Worker: public Thread {
+    void workerBody();
+    const char* ime;
 public:
-    PingWorkerA():Thread() {}
-
+    Worker(const char* _ime) : Thread(), ime(_ime) {}
     void run() override {
-        workerBodyA(nullptr);
+        workerBody();
     }
 };
+class ReaderA: public Thread {
+    Thread* first;
+    Thread* second;
+    void readerABody();
+public:
+    ReaderA(Thread* _first, Thread* _second ):Thread(), first(_first), second(_second){}
 
-void PingWorkerA::workerBodyA(void *arg){
-    for (int i = 0; i < 10; i++) {
-        semA->wait();
-        printString("A: i="); printInt(i); printString("\n");
-        semB->signal();
+    void run() override {
+        readerABody();
     }
-    done->signal();   // javi da je nit A zavrsila
+};
+void Worker::workerBody(){
+    printString("nit "); printString(ime); printString(" krece");printString("\n");
+    for (volatile int i = 0; i < 10000; i ++){
+        for (volatile int j = 0; j < 100000; j ++);
+    }
+    printString("nit "); printString(ime); printString(" je gotova");printString("\n");
+}
+void ReaderA::readerABody(){
+    printString("nit "); printString("A"); printString(" krece");printString("\n");
+    first->join();
+    second->join();
+    printString("nit "); printString("A"); printString(" je gotova");printString("\n");
+
 }
 
-static void pingBodyB(void *arg){
-    for (int i = 0; i < 10; i++) {
-        semB->wait();
-        printString("B: i="); printInt(i); printString("\n");
-        semA->signal();
-    }
-    done->signal();   // javi da je nit B zavrsila
-}
 
 void my_test() {
-    // 1. semafori
-    semA = new Semaphore(1);
-    semB = new Semaphore(0);
-    done = new Semaphore(0);
+    Worker* b = new Worker("B");
+    Worker* c = new Worker("C");
+    ReaderA* a = new ReaderA(b, c);
 
-    // 2. radnici
-    PingWorkerA a;
-    Thread b(pingBodyB, nullptr);
-    a.start();
-    b.start();
+    b->start();
+    c->start();
+    a->start();
 
-    // 3. cekaj oba (dva wait-a, nikakva petlja)
-    done->wait();
-    done->wait();
+    a->join();
 
-    // 4. pospremi
-    delete semA; delete semB; delete done;
 }

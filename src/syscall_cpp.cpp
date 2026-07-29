@@ -42,6 +42,10 @@ int Thread::sleep(time_t) {
     return -1;
 }
 
+void Thread::join(){
+    thread_join(&myHandle);
+}
+
 // ---------- PeriodicThread ----------
 
 PeriodicThread::PeriodicThread(time_t period) : Thread(), period(period) {}
