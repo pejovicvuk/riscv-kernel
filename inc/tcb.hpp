@@ -5,6 +5,7 @@
 
 // tcb (thread control block) = "licna karta" jedne niti:
 // sve sto jezgro mora da zna o niti da bi mogla da se pauzira i nastavi
+class SCB;
 class TCB {
 public:
     typedef void (*Body)(void*);   // tip za telo niti: funkcija koja prima void*
@@ -43,6 +44,11 @@ public:
     // isti obrazac ima i SCB
     void* operator new(size_t size);
     void operator delete(void* ptr);
+
+    static void pair(TCB* t1, TCB* t2);
+    void sync();
+
+    int getId();
 
 private:
     TCB(Body body, void* arg, uint64* stack, bool systemLevel);
@@ -85,6 +91,11 @@ private:
                       // (blokirana) - nikad oba, pa je jedan pokazivac dovoljan
     int blockResult;  // ishod cekanja na semaforu: 0 ok, negativno = zatvoren
     uint64 pendingN;  // koliko jedinica semafora nit ceka (sem_wait_n)
+
+    TCB* partner;
+    SCB* semWaitForPartner;
+
+    int id;
 
     friend class Scheduler;   // Scheduler sme da koristi next za svoj red
     friend class SCB;         // semafor blokira/ulancava niti u svoj red

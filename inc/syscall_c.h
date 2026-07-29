@@ -17,6 +17,9 @@ typedef _thread* thread_t;
 int  thread_create(thread_t* handle, void (*start_routine)(void*), void* arg);
 int  thread_exit();
 void thread_dispatch();
+void thread_pair(thread_t t1, thread_t t2);
+void thread_sync();
+int thread_getid();
 
 // semafori - "rucka" po istom obrascu kao thread_t (iza nje je SCB jezgra)
 class _sem;

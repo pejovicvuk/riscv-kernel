@@ -1,52 +1,42 @@
 #include "../inc/syscall_cpp.hpp"
 #include "printing.hpp"
 
-static Semaphore *semA, *semB, *done;
+Semaphore* done;
 
-class PingWorkerA: public Thread {
-    void workerBodyA(void* arg);
+class ThreadA : public Thread{
+
 public:
-    PingWorkerA():Thread() {}
+    void run() override{
+        for(volatile int i = 0; i < 3; i++){
+            printString("nit A id: ");printInt(getId()); printString(" krug "); printInt(i);
+            printString("\n");
+            for (volatile int j = 0; j < 10000; j++);
+            sync();
+        }
+        done->signal();
+    }
+};
+class ThreadB : public Thread{
 
-    void run() override {
-        workerBodyA(nullptr);
+public:
+    void run() override{
+        for(volatile int i = 0; i < 3; i++){
+            printString("nit B id: ");printInt(getId()); printString(" krug "); printInt(i);
+            printString("\n");
+            sync();
+        }
+        done->signal();
     }
 };
 
-void PingWorkerA::workerBodyA(void *arg){
-    for (int i = 0; i < 10; i++) {
-        semA->wait();
-        printString("A: i="); printInt(i); printString("\n");
-        semB->signal();
-    }
-    done->signal();   // javi da je nit A zavrsila
-}
-
-static void pingBodyB(void *arg){
-    for (int i = 0; i < 10; i++) {
-        semB->wait();
-        printString("B: i="); printInt(i); printString("\n");
-        semA->signal();
-    }
-    done->signal();   // javi da je nit B zavrsila
-}
-
 void my_test() {
-    // 1. semafori
-    semA = new Semaphore(1);
-    semB = new Semaphore(0);
     done = new Semaphore(0);
-
-    // 2. radnici
-    PingWorkerA a;
-    Thread b(pingBodyB, nullptr);
-    a.start();
-    b.start();
-
-    // 3. cekaj oba (dva wait-a, nikakva petlja)
+    ThreadA* a = new ThreadA();
+    ThreadB* b = new ThreadB();
+    b->start();
+    a->start();
+    Thread::pair(a,b);
     done->wait();
     done->wait();
-
-    // 4. pospremi
-    delete semA; delete semB; delete done;
+    delete done;
 }

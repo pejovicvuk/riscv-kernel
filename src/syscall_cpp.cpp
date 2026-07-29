@@ -37,6 +37,17 @@ void Thread::dispatch() {
     thread_dispatch();
 }
 
+void Thread::pair(Thread *t1, Thread *t2){
+    thread_pair(t1->myHandle, t2->myHandle);
+}
+void Thread::sync(){
+    thread_sync();
+}
+
+int Thread::getId(){
+    return thread_getid();
+}
+
 // stub do zadatka 4: nema time_sleep sistemskog poziva jos - vraca gresku
 int Thread::sleep(time_t) {
     return -1;

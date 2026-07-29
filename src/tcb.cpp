@@ -4,6 +4,9 @@
 #include "../inc/print.hpp"
 #include "../inc/riscv.hpp"
 #include "../inc/syscall_c.h"   // za thread_exit iz userWrapper-a (u-mode deo)
+#include "../inc/scb.hpp"
+
+static int idCounter = 0;
 
 // asemblerska rutina iz contextSwitch.S
 extern "C" void contextSwitch(TCB::Context* oldCtx, TCB::Context* newCtx);
@@ -25,7 +28,7 @@ TCB::TCB(Body body, void* arg, uint64* stack, bool systemLevel)
       context({0, 0}),
       finished(false), systemLevel(systemLevel),
       timeSlice(DEFAULT_TIME_SLICE), next(nullptr),
-      blockResult(0), pendingN(1)
+      blockResult(0), pendingN(1), partner(), semWaitForPartner(), id(++idCounter)
 {}
 
 // otkucaj tajmera: kvantum tekuce niti curi; kad iscuri - preotimanje.
@@ -39,6 +42,7 @@ bool TCB::tick() {
 void TCB::reapZombie() {
     if (!zombie) return;
     if (zombie->stack) MemoryAllocator::free(zombie->stack);
+    delete zombie->semWaitForPartner;
     delete zombie;
     zombie = nullptr;
 }
@@ -119,4 +123,22 @@ void TCB::dispatch() {
     if (!running->finished) Scheduler::put(running);
     else zombie = running;   // jos stojimo na njegovom steku - ciscenje kasnije!
     switchToNext();
+}
+
+void TCB::pair(TCB* t1, TCB* t2){
+    if (t1->partner || t2->partner) return;
+    t1->partner = t2;
+    t2->partner = t1;
+    //kreiraj im po semafor
+    t1->semWaitForPartner = SCB::createSemaphore(0);
+    t2->semWaitForPartner = SCB::createSemaphore(0);
+}
+void TCB::sync(){
+    if (!running->partner) return;
+    running->partner->semWaitForPartner->signal(1);
+    running->semWaitForPartner->wait(1);
+
+}
+int TCB::getId(){
+    return running->id;
 }

@@ -104,6 +104,17 @@ extern "C" uint64 handleSupervisorTrap(uint64 a0, uint64 a1, uint64 a2, uint64 a
                 __putc((char)a1);
                 ret = 0;
                 break;
+            case 0x51:
+                TCB::pair((TCB*)a1, (TCB*)a2);
+                ret = 0;
+                break;
+            case 0x52:
+                TCB::running->sync();
+                ret = 0;
+                break;
+            case 0x61:
+                ret = TCB::running->getId();
+                break;
             default:
                 ret = (uint64)-1;   // nepoznat kod sistemskog poziva
         }

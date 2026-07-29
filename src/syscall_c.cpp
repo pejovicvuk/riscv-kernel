@@ -121,3 +121,21 @@ void putc(char c) {
     register uint64 ch   asm("a1") = (uint64)c;
     asm volatile("ecall" : "=r"(code) : "r"(code), "r"(ch) : "memory");
 }
+
+void thread_pair(thread_t t1, thread_t t2){
+    register uint64 code asm("a0") = 0x51;
+    register uint64 th1   asm("a1") = (uint64)t1;
+    register uint64 th2  asm("a2") = (uint64)t2;
+    asm volatile("ecall" : "=r"(code) : "r"(code), "r"(th1), "r"(th2) : "memory");
+}   
+
+void thread_sync(){
+    register uint64 code asm("a0") = 0x52;
+    asm volatile("ecall" : "=r"(code) : "r"(code) : "memory");
+}
+
+int thread_getid(){
+    register uint64 code asm("a0") = 0x61;
+    asm volatile("ecall" : "=r"(code) : "r"(code) : "memory");
+    return (int)code;
+}

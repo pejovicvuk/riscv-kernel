@@ -19,7 +19,10 @@ public:
     int start();
 
     static void dispatch();
+    void sync();
+    static void pair(Thread* t1, Thread* t2);
     static int  sleep(time_t);
+    static int getId();
 
 protected:
     Thread();
