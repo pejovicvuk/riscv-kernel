@@ -41,7 +41,12 @@ void Thread::dispatch() {
 int Thread::sleep(time_t) {
     return -1;
 }
-
+void Thread::joinAll(){
+    thread_join_all();
+}
+void Thread::addChild(Thread* child){
+    thread_add_child(child->myHandle);
+}
 // ---------- PeriodicThread ----------
 
 PeriodicThread::PeriodicThread(time_t period) : Thread(), period(period) {}

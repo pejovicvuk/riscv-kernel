@@ -21,6 +21,9 @@ public:
     static void dispatch();
     static int  sleep(time_t);
 
+    void joinAll();
+    void addChild(Thread* child);
+
 protected:
     Thread();
     virtual void run() {}

@@ -1,52 +1,78 @@
 #include "../inc/syscall_cpp.hpp"
 #include "printing.hpp"
 
-static Semaphore *semA, *semB, *done;
-
-class PingWorkerA: public Thread {
-    void workerBodyA(void* arg);
+class ThreadC : public Thread{
+    const char* name;
 public:
-    PingWorkerA():Thread() {}
-
-    void run() override {
-        workerBodyA(nullptr);
+    ThreadC(const char* _name) : Thread(), name(_name){}
+    void run() override{
+        printString(name) ;printString(" krece \n");
+        printString(" C krece \n");
+        for (volatile int i = 0; i < 100000; i++);
+        printString(" C gotov \n");
+        printString(name) ;printString(" krece \n");
     }
 };
 
-void PingWorkerA::workerBodyA(void *arg){
-    for (int i = 0; i < 10; i++) {
-        semA->wait();
-        printString("A: i="); printInt(i); printString("\n");
-        semB->signal();
+class ThreadB : public Thread{
+    const char* name;
+public:
+    ThreadB(const char* _name) : Thread(), name(_name){}
+    void run() override{
+        printString(name) ;printString(" krece \n");
+        ThreadC* c1 = new ThreadC("c1");
+        ThreadC* c2 = new ThreadC("c2");
+        ThreadC* c3 = new ThreadC("c3");
+
+        c1->start();
+        c2->start();
+        c3->start();
+
+        this->addChild(c1);
+        this->addChild(c2);
+        this->addChild(c3);
+
+        this->joinAll();
+        printString(name) ;printString(" gotov \n");
     }
-    done->signal();   // javi da je nit A zavrsila
+};
+
+class ThreadA : public Thread{
+    
+    void workerBodyA();
+public:
+    void run() override{
+        workerBodyA();
+    }
+};
+void ThreadA::workerBodyA(){
+        printString(" A krece \n");
+        ThreadB* b1 = new ThreadB("b1");
+        ThreadB* b2 = new ThreadB("b2");
+        ThreadB* b3 = new ThreadB("b3");
+
+        ThreadC* c1 = new ThreadC("c(A)");
+
+        b1->start();
+        b2->start();
+        b3->start();
+        c1->start();
+
+        this->addChild(b1);
+        this->addChild(b2);
+        this->addChild(b3);
+        this->addChild(c1);
+
+        this->joinAll();
+
+        printString(" A gotov \n");
 }
 
-static void pingBodyB(void *arg){
-    for (int i = 0; i < 10; i++) {
-        semB->wait();
-        printString("B: i="); printInt(i); printString("\n");
-        semA->signal();
-    }
-    done->signal();   // javi da je nit B zavrsila
-}
 
 void my_test() {
-    // 1. semafori
-    semA = new Semaphore(1);
-    semB = new Semaphore(0);
-    done = new Semaphore(0);
+    ThreadA* a = new ThreadA();
+    a->start();
+    a->addChild(a);
+    a->joinAll();
 
-    // 2. radnici
-    PingWorkerA a;
-    Thread b(pingBodyB, nullptr);
-    a.start();
-    b.start();
-
-    // 3. cekaj oba (dva wait-a, nikakva petlja)
-    done->wait();
-    done->wait();
-
-    // 4. pospremi
-    delete semA; delete semB; delete done;
 }
