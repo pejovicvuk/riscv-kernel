@@ -69,6 +69,9 @@ extern "C" uint64 handleSupervisorTrap(uint64 a0, uint64 a1, uint64 a2, uint64 a
                 TCB::dispatch();
                 ret = 0;
                 break;
+            case 0x14:
+                ret = TCB::running->getId();
+                break;
             case 0x21: { // sem_open(handle, init)
                 SCB* sem = SCB::createSemaphore((unsigned)a2);
                 if (sem) { *(SCB**)a1 = sem; ret = 0; }
@@ -93,6 +96,9 @@ extern "C" uint64 handleSupervisorTrap(uint64 a0, uint64 a1, uint64 a2, uint64 a
                 break;
             case 0x26:   // sem_signal_n(id, n)
                 ret = a1 ? (uint64)((SCB*)a1)->signal((unsigned)a2) : (uint64)-1;
+                break;
+            case 0x27:
+                ret = (uint64)SCB::pairSems((SCB*)a1, (SCB*)a2);
                 break;
             case 0x41:   // getc - iz ulaznog bafera console.lib (pdf str. 31)
                 // __getc ceka znak, a dok ceka SAM privremeno dozvoli

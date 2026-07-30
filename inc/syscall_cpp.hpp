@@ -21,6 +21,8 @@ public:
     static void dispatch();
     static int  sleep(time_t);
 
+    static int getId();
+
 protected:
     Thread();
     virtual void run() {}
@@ -41,6 +43,8 @@ public:
 
     int wait();
     int signal();
+
+    static void pairSems(Semaphore* s1, Semaphore* s2);
 
 private:
     sem_t myHandle;

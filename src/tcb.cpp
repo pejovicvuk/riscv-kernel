@@ -5,6 +5,8 @@
 #include "../inc/riscv.hpp"
 #include "../inc/syscall_c.h"   // za thread_exit iz userWrapper-a (u-mode deo)
 
+static int idCounter = 0;
+
 // asemblerska rutina iz contextSwitch.S
 extern "C" void contextSwitch(TCB::Context* oldCtx, TCB::Context* newCtx);
 
@@ -25,7 +27,7 @@ TCB::TCB(Body body, void* arg, uint64* stack, bool systemLevel)
       context({0, 0}),
       finished(false), systemLevel(systemLevel),
       timeSlice(DEFAULT_TIME_SLICE), next(nullptr),
-      blockResult(0), pendingN(1)
+      blockResult(0), pendingN(1), id(++idCounter)
 {}
 
 // otkucaj tajmera: kvantum tekuce niti curi; kad iscuri - preotimanje.
@@ -119,4 +121,8 @@ void TCB::dispatch() {
     if (!running->finished) Scheduler::put(running);
     else zombie = running;   // jos stojimo na njegovom steku - ciscenje kasnije!
     switchToNext();
+}
+
+int TCB::getId(){
+    return running->id;
 }

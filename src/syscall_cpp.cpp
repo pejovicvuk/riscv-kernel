@@ -37,6 +37,10 @@ void Thread::dispatch() {
     thread_dispatch();
 }
 
+int Thread::getId(){
+    return thread_getid();
+}
+
 // stub do zadatka 4: nema time_sleep sistemskog poziva jos - vraca gresku
 int Thread::sleep(time_t) {
     return -1;
@@ -67,6 +71,9 @@ int Semaphore::wait() {
 
 int Semaphore::signal() {
     return sem_signal(myHandle);
+}
+void Semaphore::pairSems(Semaphore *s1, Semaphore *s2){
+    sem_pair(s1->myHandle, s2->myHandle);
 }
 
 // ---------- Console ----------

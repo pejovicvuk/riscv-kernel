@@ -26,6 +26,8 @@ public:
     void* operator new(size_t size);
     void operator delete(void* ptr);
 
+    static int pairSems(SCB* s1, SCB* s2);
+
 private:
     SCB(unsigned init);
     void enqueue(TCB* t);
@@ -34,6 +36,12 @@ private:
     unsigned value;   // broj slobodnih "mesta"
     TCB* head;        // fifo red blokiranih niti (ulancan kroz TCB::next -
     TCB* tail;        // nit je uvek u najvise JEDNOM redu, pa je next slobodan)
+
+    struct Partner{
+        SCB* semaphore;
+        Partner* next;
+    };
+    Partner* partnersHead;
 };
 
 #endif // _scb_hpp_

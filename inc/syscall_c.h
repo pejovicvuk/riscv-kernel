@@ -17,6 +17,7 @@ typedef _thread* thread_t;
 int  thread_create(thread_t* handle, void (*start_routine)(void*), void* arg);
 int  thread_exit();
 void thread_dispatch();
+int thread_getid();
 
 // semafori - "rucka" po istom obrascu kao thread_t (iza nje je SCB jezgra)
 class _sem;
@@ -28,6 +29,7 @@ int sem_wait(sem_t id);
 int sem_signal(sem_t id);
 int sem_wait_n(sem_t id, unsigned n);
 int sem_signal_n(sem_t id, unsigned n);
+int sem_pair(sem_t s1, sem_t s2);
 
 // konzola
 const int EOF = -1;

@@ -10,7 +10,7 @@ void SCB::operator delete(void* ptr) {
     MemoryAllocator::free(ptr);
 }
 
-SCB::SCB(unsigned init) : value(init), head(nullptr), tail(nullptr) {}
+SCB::SCB(unsigned init) : value(init), head(nullptr), tail(nullptr), partnersHead(nullptr) {}
 
 SCB* SCB::createSemaphore(unsigned init) {
     return new SCB(init);
@@ -37,6 +37,16 @@ int SCB::wait(unsigned n) {
     if (value >= n) {
         value -= n;      // ima mesta: prodji odmah
         return 0;
+    }
+    Partner* curr = partnersHead;
+    while(curr){
+
+        if(curr->semaphore->value >= n){
+            //prodji na curr semaforu
+            curr->semaphore->value -= n;
+            return 1;
+        }
+        curr = curr->next;
     }
     // nema mesta: stani u red OVOG semafora i predaj procesor.
     // nit NE ide u scheduler - za nju zna samo ovaj red, dok je neko
@@ -71,5 +81,18 @@ int SCB::close() {
         t->blockResult = -1;
         Scheduler::put(t);
     }
+    return 0;
+}
+int SCB::pairSems(SCB* s1, SCB* s2){
+    if (!s1 || !s2) return -1;
+    Partner* p1 = (Partner*)MemoryAllocator::alloc(sizeof(Partner));
+    Partner* p2 = (Partner*)MemoryAllocator::alloc(sizeof(Partner));
+    p1->semaphore = s2;
+    p2->semaphore = s1;
+    
+    p1->next = s1->partnersHead;
+    s1->partnersHead = p1;
+    p2->next = s2->partnersHead;
+    s2->partnersHead = p2;
     return 0;
 }

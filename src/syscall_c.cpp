@@ -64,6 +64,12 @@ void thread_dispatch() {
     asm volatile("ecall" : "=r"(code) : "r"(code) : "memory");
 }
 
+int thread_getid(){
+    register uint64 code asm("a0") = 0x14;
+    asm volatile("ecall" : "=r"(code) : "r"(code) : "memory");
+    return (int)code;
+}
+
 int sem_open(sem_t* handle, unsigned init) {
     if (!handle) return -1;
     register uint64 code asm("a0") = 0x21;
@@ -120,4 +126,12 @@ void putc(char c) {
     register uint64 code asm("a0") = 0x42;
     register uint64 ch   asm("a1") = (uint64)c;
     asm volatile("ecall" : "=r"(code) : "r"(code), "r"(ch) : "memory");
+}
+
+int sem_pair(sem_t sem1, sem_t sem2){
+    register uint64 code asm("a0") = 0x27;
+    register uint64 s1   asm("a1") = (uint64)sem1;
+    register uint64 s2   asm("a2") = (uint64)sem2;
+    asm volatile("ecall" : "=r"(code) : "r"(code), "r"(s1), "r"(s2) : "memory");
+    return (int)code;
 }
