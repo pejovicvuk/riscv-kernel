@@ -41,7 +41,12 @@ void Thread::dispatch() {
 int Thread::sleep(time_t) {
     return -1;
 }
-
+int Thread::getID(){
+    return thread_getid();
+}
+void Thread::setMaxThread(int num){
+    thread_set_max(num);
+}
 // ---------- PeriodicThread ----------
 
 PeriodicThread::PeriodicThread(time_t period) : Thread(), period(period) {}

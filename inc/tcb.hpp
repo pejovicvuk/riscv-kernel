@@ -3,6 +3,8 @@
 
 #include "../lib/hw.h"
 
+
+
 // tcb (thread control block) = "licna karta" jedne niti:
 // sve sto jezgro mora da zna o niti da bi mogla da se pauzira i nastavi
 class TCB {
@@ -43,6 +45,13 @@ public:
     // isti obrazac ima i SCB
     void* operator new(size_t size);
     void operator delete(void* ptr);
+
+    static int getId();
+    static void setMaximumThreads(int num);
+
+    static TCB* waitHead; static TCB* waitTail;
+    static int maxThreads;
+    static int activeCount;
 
 private:
     TCB(Body body, void* arg, uint64* stack, bool systemLevel);
@@ -85,6 +94,8 @@ private:
                       // (blokirana) - nikad oba, pa je jedan pokazivac dovoljan
     int blockResult;  // ishod cekanja na semaforu: 0 ok, negativno = zatvoren
     uint64 pendingN;  // koliko jedinica semafora nit ceka (sem_wait_n)
+
+    int id;
 
     friend class Scheduler;   // Scheduler sme da koristi next za svoj red
     friend class SCB;         // semafor blokira/ulancava niti u svoj red

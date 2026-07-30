@@ -5,6 +5,11 @@
 #include "../inc/riscv.hpp"
 #include "../inc/syscall_c.h"   // za thread_exit iz userWrapper-a (u-mode deo)
 
+static int counter = 0;
+TCB* TCB::waitHead = nullptr;
+TCB* TCB::waitTail = nullptr;
+int  TCB::maxThreads = 5;      // podrazumevano iz postavke!
+int  TCB::activeCount = 0;
 // asemblerska rutina iz contextSwitch.S
 extern "C" void contextSwitch(TCB::Context* oldCtx, TCB::Context* newCtx);
 
@@ -25,7 +30,7 @@ TCB::TCB(Body body, void* arg, uint64* stack, bool systemLevel)
       context({0, 0}),
       finished(false), systemLevel(systemLevel),
       timeSlice(DEFAULT_TIME_SLICE), next(nullptr),
-      blockResult(0), pendingN(1)
+      blockResult(0), pendingN(1), id(++counter)
 {}
 
 // otkucaj tajmera: kvantum tekuce niti curi; kad iscuri - preotimanje.
@@ -72,6 +77,7 @@ void TCB::userWrapper() {
 }
 
 TCB* TCB::createThread(Body body, void* arg, void* stackSpace, bool systemLevel) {
+
     // prava nit bez steka ne moze da postoji
     if (body && !stackSpace) return nullptr;
 
@@ -86,9 +92,23 @@ TCB* TCB::createThread(Body body, void* arg, void* stackSpace, bool systemLevel)
         tcb->context.sp = top - 96;                             // mesto za 12 "s-registara"
         uint64* fakeRegs = (uint64*)tcb->context.sp;
         for (int i = 0; i < 12; i++) fakeRegs[i] = 0;           // nit krece cistih ruku
-        tcb->context.ra = (uint64)&threadWrapper;
 
-        Scheduler::put(tcb);
+        tcb->context.ra = (uint64)&threadWrapper;
+        if (activeCount >= maxThreads){
+            if(!waitTail){
+                waitTail = tcb;
+                waitHead = tcb;
+            }
+            else{
+                waitTail->next = tcb;
+                waitTail = tcb;
+                tcb->next = nullptr;
+            }
+        } 
+        else {
+            activeCount++;
+            Scheduler::put(tcb);
+        }
     }
     // nulta nit (body == nullptr, main): bez steka i bez reda - njen kontekst
     // ce prirodno upisati njen prvi contextSwitch
@@ -117,6 +137,26 @@ void TCB::switchToNext() {
 // sinhrona promena konteksta: tekuca nit ustupa procesor
 void TCB::dispatch() {
     if (!running->finished) Scheduler::put(running);
-    else zombie = running;   // jos stojimo na njegovom steku - ciscenje kasnije!
+    else {
+        zombie = running;   // jos stojimo na njegovom steku - ciscenje kasnije!
+        if (waitTail){
+            TCB* t = waitHead;
+            waitHead = t->next;
+            if(!waitHead) waitTail = nullptr;
+            Scheduler::put(t);
+        }
+        else{
+            activeCount--;
+        }
+    }
     switchToNext();
+}
+
+int TCB::getId(){
+    int threadID = running->id;
+    dispatch();
+    return threadID;
+}
+void TCB::setMaximumThreads(int num){
+    maxThreads = num;
 }

@@ -20,7 +20,8 @@ public:
 
     static void dispatch();
     static int  sleep(time_t);
-
+    static int getID();
+    static void setMaxThread(int num);
 protected:
     Thread();
     virtual void run() {}

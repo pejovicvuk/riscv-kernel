@@ -69,6 +69,13 @@ extern "C" uint64 handleSupervisorTrap(uint64 a0, uint64 a1, uint64 a2, uint64 a
                 TCB::dispatch();
                 ret = 0;
                 break;
+            case 0x14:
+                ret = TCB::getId();
+                break;
+            case 0x15:
+                TCB::setMaximumThreads((int)a1);
+                ret = 0;
+                break;
             case 0x21: { // sem_open(handle, init)
                 SCB* sem = SCB::createSemaphore((unsigned)a2);
                 if (sem) { *(SCB**)a1 = sem; ret = 0; }

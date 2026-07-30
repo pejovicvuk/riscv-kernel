@@ -64,6 +64,17 @@ void thread_dispatch() {
     asm volatile("ecall" : "=r"(code) : "r"(code) : "memory");
 }
 
+int thread_getid(){
+    register uint64 code asm("a0") = 0x14;
+    asm volatile("ecall" : "=r"(code) : "r"(code) : "memory");
+    return (int)code;
+};
+void thread_set_max(int num){
+    register uint64 code asm("a0") = 0x15;
+    register uint64 n    asm("a1") = (uint64)num;
+    asm volatile("ecall" : "=r"(code) : "r"(code), "r"(n) : "memory");
+}
+
 int sem_open(sem_t* handle, unsigned init) {
     if (!handle) return -1;
     register uint64 code asm("a0") = 0x21;
