@@ -4,8 +4,9 @@ fajlovi: `src/riscv.cpp` (grana code==1), `h/tcb.hpp` + `src/tcb.cpp`
 (tick, usedTicks, timeSlice, reset u switchToNext), `src/main.cpp`
 (redosled ukljucivanja prekida)
 
-uradjeno 2026-07-21, odluka studenta: samo ovaj deo zadatka 4 (kao i
-kolegin projekat) - BEZ time_sleep, BEZ svoje konzole, BEZ PeriodicThread.
+uradjeno 2026-07-21, tada kao JEDINI deo zadatka 4. od 2026-08-05
+zadatak 4 je kompletan (lekcija 12): tajmerska grana sada PRE tick-a
+zove i `TCB::wakeSleepers()` (budjenje niti uspavanih time_sleep-om).
 
 ## sta je asinhrona promena konteksta
 

@@ -1,5 +1,10 @@
 # 08 - zvanicni testovi + konzola kroz console.lib
 
+> NAPOMENA (2026-08-05): ova lekcija opisuje 20p fazu projekta. sa
+> zadatkom 4 console.lib je IZBACENA - konzola je sada nasa (klasa CCB,
+> lekcija 12). istorija ispod i dalje vazi kao objasnjenje ZASTO je 20p
+> verzija morala console.lib (pdf str. 31) i kako se do toga doslo.
+
 fajlovi: `test/` (zvanicni fajlovi), `src/userMain.cpp` (zvanicni meni,
 prilagodjen), `h/syscall_c.h` (preimenovan sa .hpp), `src/riscv.cpp`
 (case 0x41/0x42 + grana za konzolni prekid), `src/syscall_c.cpp` (getc/putc),

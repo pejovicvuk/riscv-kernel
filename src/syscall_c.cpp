@@ -110,6 +110,13 @@ int sem_signal_n(sem_t id, unsigned n) {
     return (int)code;
 }
 
+int time_sleep(time_t period) {
+    register uint64 code asm("a0") = 0x31;
+    register uint64 t    asm("a1") = (uint64)period;
+    asm volatile("ecall" : "=r"(code) : "r"(code), "r"(t) : "memory");
+    return (int)code;
+}
+
 char getc() {
     register uint64 code asm("a0") = 0x41;
     asm volatile("ecall" : "=r"(code) : "r"(code) : "memory");

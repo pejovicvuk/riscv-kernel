@@ -7,9 +7,9 @@ DEBUG_FLAG = -D DEBUG_PRINT=0
 KERNEL_IMG = kernel
 KERNEL_ASM = kernel.asm
 
+# console.lib vise nije potrebna: zadatak 4 donosi nasu konzolu (ccb)
 LIBS = \
-  ${DIR_LIBS}/hw.lib \
-  ${DIR_LIBS}/console.lib
+  ${DIR_LIBS}/hw.lib
 
 # riscv64-unknown-elf- or riscv64-linux-gnu-
 # perhaps in /opt/riscv/bin

@@ -20,6 +20,7 @@ na koja treba znati odgovor.
 | 09 | [semafori (zadatak 3)](09-semafori.md) | gotovo |
 | 10 | [vodic kroz flowove (citanje koda)](10-vodic-kroz-flowove.md) | gotovo |
 | 11 | [deljenje vremena (preotimanje)](11-deljenje-vremena.md) | gotovo |
+| 12 | [zadatak 4 u celosti: sleep, konzola, PeriodicThread](12-zadatak4-sleep-konzola.md) | gotovo - ceka testiranje |
 
 ## trenutno stanje projekta
 
@@ -55,11 +56,15 @@ na koja treba znati odgovor.
   projekat): preotimanje na tajmerski prekid - TCB::tick + dispatch iz
   grane code==1, kvantum timeSlice po niti, reset u switchToNext,
   prekidi u main-u tek posle nulte niti. testovi 3/4 sada teku
-  KONTINUALNO (overeno); time_sleep, svoja konzola i PeriodicThread
-  se i dalje NE rade
-- u toku: rezim potpunog razumevanja - citanje koda po lekcijama 10 i 11
-- sledece (odluka studenta): zadatak 4 (tajmer/preotimanje, time_sleep,
-  prava konzola -> testovi 5 i 6) ili priprema odbrane
+  KONTINUALNO (overeno)
+- ZADATAK 4 U CELOSTI (2026-08-05, lekcija 12): time_sleep 0x31 (lista
+  uspavanih sa relativnim razlikama u TCB), PRAVA KONZOLA - nova klasa
+  CCB (kruzni baferi + 3 SCB semafora + izlazna sistemska nit; prekidna
+  rutina sama radi plic_claim/complete), console.lib IZBACENA iz
+  Makefile-a; Thread::sleep i PeriodicThread (terminate preko period=0,
+  run() redefinisan); main pred gasenje prazni izlazni bafer (drain).
+  uvezeni testovi 5 i 6, LEVEL_4=1. CEKA: make clean && make + provera
+  svih testova 1-7 (regresija 1,2,3,4,7 + novi 5,6)
 
 ## kako radimo
 

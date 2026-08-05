@@ -11,6 +11,7 @@ extern "C" void contextSwitch(TCB::Context* oldCtx, TCB::Context* newCtx);
 TCB* TCB::running   = nullptr;
 TCB* TCB::zombie    = nullptr;
 uint64 TCB::usedTicks = 0;
+TCB* TCB::sleepHead = nullptr;
 
 // new/delete za tcb: direktno na alokator jezgra (bez ecall-a)
 void* TCB::operator new(size_t size) {
@@ -25,7 +26,7 @@ TCB::TCB(Body body, void* arg, uint64* stack, bool systemLevel)
       context({0, 0}),
       finished(false), systemLevel(systemLevel),
       timeSlice(DEFAULT_TIME_SLICE), next(nullptr),
-      blockResult(0), pendingN(1)
+      blockResult(0), pendingN(1), sleepRelative(0)
 {}
 
 // otkucaj tajmera: kvantum tekuce niti curi; kad iscuri - preotimanje.
@@ -119,4 +120,50 @@ void TCB::dispatch() {
     if (!running->finished) Scheduler::put(running);
     else zombie = running;   // jos stojimo na njegovom steku - ciscenje kasnije!
     switchToNext();
+}
+
+// uspavaj tekucu nit na zadati broj otkucaja tajmera (syscall 0x31).
+// umetanje u sortiranu listu relativnih razlika: setajuci kroz listu
+// trosimo zadato vreme na prethodnike; ostatak je NASA razlika, a
+// sledbeniku se ona ODUZIMA - on od sada meri vreme od nas
+int TCB::putToSleep(time_t ticks) {
+    if (ticks == 0) return 0;   // nema sta da se ceka
+
+    TCB* self = running;
+
+    // nadji mesto: preskoci sve koji se bude pre nas (ili tacno kad i mi)
+    TCB* prev = nullptr;
+    TCB* curr = sleepHead;
+    while (curr && curr->sleepRelative <= ticks) {
+        ticks -= curr->sleepRelative;
+        prev = curr;
+        curr = curr->next;
+    }
+
+    self->sleepRelative = ticks;
+    if (curr) curr->sleepRelative -= ticks;   // sledbenik sada meri od nas
+
+    // uvezivanje istim next pokazivacem (nit je u najvise jednom redu:
+    // spava, pa nije ni u scheduleru ni u redu nekog semafora)
+    self->next = curr;
+    if (prev) prev->next = self;
+    else      sleepHead = self;
+
+    // predaj procesor: za nit sada zna samo lista uspavanih,
+    // dok je tajmerska grana ne vrati medju spremne
+    switchToNext();
+    return 0;
+}
+
+// jedan otkucaj tajmera za spavace: odbrojava se SAMO celo liste (ostali
+// su relativni na njega), pa se bude redom svi kojima je razlika pala na
+// nulu - vise niti moze deliti isti trenutak budjenja
+void TCB::wakeSleepers() {
+    if (!sleepHead) return;
+    if (sleepHead->sleepRelative > 0) sleepHead->sleepRelative--;
+    while (sleepHead && sleepHead->sleepRelative == 0) {
+        TCB* awake = sleepHead;
+        sleepHead = sleepHead->next;   // prvo pomeri glavu - put gazi next!
+        Scheduler::put(awake);
+    }
 }

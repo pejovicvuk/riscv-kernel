@@ -32,6 +32,14 @@ public:
     // vraca true kad je kvantum istekao (vreme za preotimanje)
     static bool tick();
 
+    // uspavi tekucu nit na zadati broj otkucaja tajmera (time_sleep);
+    // budi je tajmerska grana prekidne rutine kroz wakeSleepers
+    static int putToSleep(time_t ticks);
+
+    // otkucaj tajmera za listu uspavanih: odbroji celu liste (relativno
+    // vreme!), pa vrati medju spremne sve kojima je vreme isteklo
+    static void wakeSleepers();
+
     bool isFinished() const { return finished; }
     void setFinished(bool f) { finished = f; }
 
@@ -73,6 +81,12 @@ private:
     // a resetuje se na JEDNOM mestu: u switchToNext, pri izboru nove niti
     static uint64 usedTicks;
 
+    // lista uspavanih niti (time_sleep), sortirana po trenutku budjenja.
+    // svaki clan pamti vreme RELATIVNO na prethodnika (pdf str. 26): zbir
+    // razlika od cela do niti = njeno apsolutno vreme. otkucaj tako dira
+    // SAMO celo liste; jedina slozenija operacija je umetanje
+    static TCB* sleepHead;
+
     Body body;        // funkcija koju nit izvrsava
     void* arg;        // argument te funkcije
     uint64* stack;    // pocetak alociranog prostora za stek (za kasnije oslobadjanje)
@@ -85,6 +99,8 @@ private:
                       // (blokirana) - nikad oba, pa je jedan pokazivac dovoljan
     int blockResult;  // ishod cekanja na semaforu: 0 ok, negativno = zatvoren
     uint64 pendingN;  // koliko jedinica semafora nit ceka (sem_wait_n)
+    time_t sleepRelative; // preostali otkucaji do budjenja, RELATIVNO na
+                          // prethodnika u listi uspavanih (0 = isti trenutak)
 
     friend class Scheduler;   // Scheduler sme da koristi next za svoj red
     friend class SCB;         // semafor blokira/ulancava niti u svoj red

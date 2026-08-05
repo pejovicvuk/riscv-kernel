@@ -1,10 +1,10 @@
 #include "../inc/riscv.hpp"
 #include "../lib/hw.h"
-#include "../lib/console.h"   // __getc/__putc/console_handler (console.lib, pdf str. 31)
 #include "../inc/print.hpp"
 #include "../inc/memoryAllocator.hpp"
 #include "../inc/tcb.hpp"
 #include "../inc/scb.hpp"
+#include "../inc/ccb.hpp"     // nasa konzola (zadatak 4)
 
 // zajednicki c deo prekidne rutine: cita scause i grana se na obradu.
 // a0..a4 parametri se poklapaju sa registrima a0..a4 u trenutku trapa
@@ -26,20 +26,21 @@ extern "C" uint64 handleSupervisorTrap(uint64 a0, uint64 a1, uint64 a2, uint64 a
         // asinhroni prekid
         if (code == 1) {
             // softverski (tajmer), stize 10x u sekundi: potvrdi prijem,
-            // pa naplati otkucaj tekucoj niti. istekao kvantum ->
-            // ASINHRONA promena konteksta: nit gubi procesor bez svog
-            // znanja i pristanka (deljenje vremena). radi i kad prekid
-            // upadne u tudje cekanje (__getc/__putc pustaju prekide) -
-            // nit se zamrzne usred jezgra, na svom steku, kao kod semafora
+            // pa odradi oba vremenska posla (pdf str. 28):
+            // 1) probudi uspavane niti kojima je isteklo time_sleep vreme
+            // 2) naplati otkucaj tekucoj niti; istekao kvantum ->
+            //    ASINHRONA promena konteksta: nit gubi procesor bez svog
+            //    znanja i pristanka (deljenje vremena)
             Riscv::mc_sip(Riscv::SIP_SSIP);
+            TCB::wakeSleepers();
             if (TCB::tick()) {
                 TCB::dispatch();
             }
         } else if (code == 9) {
-            // spoljasnji (konzola): console_handler iz console.lib sam
-            // odradi plic_claim/plic_complete i prebaci znakove izmedju
-            // kontrolera i svojih bafera (puni ulazni / prazni izlazni)
-            console_handler();
+            // spoljasnji (konzola): nasa obrada (zadatak 4) - prekidna
+            // rutina je PROIZVODJAC ulaznog bafera: plic_claim/complete
+            // + prebaci pristigle znakove iz kontrolera u bafer
+            CCB::handleInterrupt();
         }
         // sepc se ne uvecava: prekinuta instrukcija mora da se ponovi
     }
@@ -94,14 +95,19 @@ extern "C" uint64 handleSupervisorTrap(uint64 a0, uint64 a1, uint64 a2, uint64 a
             case 0x26:   // sem_signal_n(id, n)
                 ret = a1 ? (uint64)((SCB*)a1)->signal((unsigned)a2) : (uint64)-1;
                 break;
-            case 0x41:   // getc - iz ulaznog bafera console.lib (pdf str. 31)
-                // __getc ceka znak, a dok ceka SAM privremeno dozvoli
-                // prekide -> moguc ugnjezdeni trap (konzola puni bafer).
-                // nasi sepc/sstatus su bezbedni: vec su u lokalima
-                ret = (uint64)__getc();
+            case 0x31:   // time_sleep(broj otkucaja tajmera)
+                ret = (uint64)TCB::putToSleep((time_t)a1);
                 break;
-            case 0x42:   // putc - na konzolu kroz console.lib
-                __putc((char)a1);
+            case 0x41:   // getc - iz naseg ulaznog bafera (zadatak 4)
+                // prazan bafer -> nit BLOKIRA bas ovde (kao sem_wait);
+                // budi je konzolni prekid kad znak stigne. nasi
+                // sepc/sstatus mirno cekaju u lokalima na njenom steku
+                ret = (uint64)CCB::getc();
+                break;
+            case 0x42:   // putc - u nas izlazni bafer (zadatak 4)
+                // pun bafer -> pozivalac blokira dok izlazna nit
+                // jezgra ne oslobodi mesto
+                CCB::putc((char)a1);
                 ret = 0;
                 break;
             default:

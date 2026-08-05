@@ -2,6 +2,7 @@
 #include "../inc/memoryAllocator.hpp"
 #include "../inc/tcb.hpp"
 #include "../inc/riscv.hpp"
+#include "../inc/ccb.hpp"
 #include "../inc/syscall_c.h"
 
 void userMain();   // definisana u test fajlu
@@ -28,12 +29,16 @@ int main() {
     // kad prvi put ustupi procesor (kontekst mu se popuni pri prvom dispatch-u)
     TCB::running = TCB::createThread(nullptr, nullptr, nullptr, true);   // nulta nit je sistemska
 
+    // konzola (zadatak 4): baferi, semafori i izlazna nit jezgra - pre
+    // ukljucivanja prekida, da prvi konzolni prekid zatekne spremne bafere
+    CCB::init();
+
     // prekidi se pustaju tek SAD, kad nulta nit postoji: tajmerski otkucaj
     // naplacuje kvantum tekucoj niti (TCB::tick cita running), pa running
     // mora biti ziv pre prvog prekida.
-    // sie po vrsti: konzola (seie) MORA - console_handler na svaki njen
-    // prekid prebacuje znakove izmedju kontrolera i bafera console.lib;
-    // tajmer (ssie) - pogon deljenja vremena (preotimanje).
+    // sie po vrsti: konzola (seie) MORA - nas CCB::handleInterrupt na njen
+    // prekid puni ulazni bafer sa kontrolera; tajmer (ssie) - pogon
+    // deljenja vremena (preotimanje) i budjenja uspavanih (time_sleep).
     Riscv::ms_sie(Riscv::SIE_SSIE | Riscv::SIE_SEIE);
 
     // dozvoli prekide i u sistemskom rezimu (sstatus.SIE): main radi u
@@ -50,6 +55,10 @@ int main() {
     } else {
         while (!userMainDone) thread_dispatch();
     }
+
+    // pre gasenja: pusti izlaznu nit da posalje sve iz izlaznog bafera -
+    // inace bi poslednje poruke testa nestale zajedno sa emulatorom
+    while (!CCB::outputEmpty()) thread_dispatch();
 
     kputs(">> kernel: userMain finished, halting\n");
 

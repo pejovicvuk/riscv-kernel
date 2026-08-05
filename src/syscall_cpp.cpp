@@ -37,17 +37,30 @@ void Thread::dispatch() {
     thread_dispatch();
 }
 
-// stub do zadatka 4: nema time_sleep sistemskog poziva jos - vraca gresku
-int Thread::sleep(time_t) {
-    return -1;
+// nit spava zadati broj perioda tajmera (zadatak 4)
+int Thread::sleep(time_t time) {
+    return time_sleep(time);
 }
 
 // ---------- PeriodicThread ----------
 
 PeriodicThread::PeriodicThread(time_t period) : Thread(), period(period) {}
 
-// stub do zadatka 4: periodicno aktiviranje trazi time_sleep
-void PeriodicThread::terminate() {}
+// telo periodicne niti: aktivacija pa spavanje, dok je neko ne ugasi.
+// interfejs iz pdf-a ne sme da dobije nova polja, pa terminate koristi
+// postojece polje period: 0 = zahtev za kraj (period 0 ionako nema smisla)
+void PeriodicThread::run() {
+    while (period > 0) {
+        periodicActivation();
+        if (period > 0) Thread::sleep(period);   // terminate mogao stici i iz aktivacije
+    }
+}
+
+// gasenje: tekuce spavanje se dovrsi, nove aktivacije vise nema;
+// nit posle toga regularno zavrsi (izadje iz run petlje)
+void PeriodicThread::terminate() {
+    period = 0;
+}
 
 // ---------- Semaphore ----------
 

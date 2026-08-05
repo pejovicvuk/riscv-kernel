@@ -29,6 +29,9 @@ int sem_signal(sem_t id);
 int sem_wait_n(sem_t id, unsigned n);
 int sem_signal_n(sem_t id, unsigned n);
 
+// uspavljivanje: nit spava zadati broj perioda tajmera (zadatak 4)
+int time_sleep(time_t);
+
 // konzola
 const int EOF = -1;
 char getc();

@@ -54,6 +54,11 @@ protected:
     PeriodicThread(time_t period);
     virtual void periodicActivation() {}
 
+    // telo periodicne niti: aktivacija pa spavanje, u krug (zadatak 4).
+    // redefinicija POSTOJECEG virtuelnog run() - interfejs iz pdf-a se ne
+    // sme siriti novim poljima ni novim virtuelnim metodama (str. 11)
+    void run() override;
+
 private:
     time_t period;
 };

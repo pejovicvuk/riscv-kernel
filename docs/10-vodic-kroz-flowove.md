@@ -24,8 +24,8 @@ znanje iz prethodnih. ne preskaci.
 | jezgro-red | `h/scheduler.hpp`, `src/scheduler.cpp` | fifo red spremnih niti |
 | jezgro-semafori | `h/scb.hpp`, `src/scb.cpp` | SCB: brojac + fifo red blokiranih |
 | jezgro-memorija | `h/memoryAllocator.hpp`, `src/memoryAllocator.cpp` | slobodna lista, first-fit |
-| start/kraj | `src/main.cpp` | podesavanje masine, nulta nit, userMain kao nit |
-| konzola (dato) | `lib/console.h` + console.lib | __getc/__putc (baferi) + console_handler (prekid) |
+| jezgro-konzola | `h/ccb.hpp`, `src/ccb.cpp` | CCB: nasi baferi + izlazna nit (zadatak 4, lekcija 12) |
+| start/kraj | `src/main.cpp` | podesavanje masine, nulta nit, CCB::init, userMain kao nit |
 
 kljucna slika koju drzi ceo projekat: **korisnicki sloj i jezgro su u istom
 adresnom prostoru** (nema memorijske zastite), ali granica privilegija
@@ -337,35 +337,48 @@ isti taj povratak javi niti da je cekala dzabe.
 
 ---
 
-## flow 7: konzola - getc/putc kroz console.lib
+## flow 7: konzola - getc/putc kroz NASE bafere (CCB, zadatak 4)
 
 scenario: meni testova ceka tvoj unos; printString ispisuje tekst.
-(istorija: prvo smo pogresno radili rucni polling - lekcija 08 objasnjava
-zasto je 20p verzija DUZNA da koristi console.lib, pdf str. 31.)
+(istorija: prvo rucni polling - pogresno; pa console.lib - 20p verzija,
+lekcija 08; sad SVOJA konzola - zadatak 4, lekcija 12.)
 
-1. `test/printing.cpp` - `printString` u petlji zove `putc(c)` za svaki
-   karakter (uz zakljucavanje preko `test/lock.S` copy_and_swap - to je
-   deo zvanicnog test paketa, ne naseg jezgra).
-2. `src/syscall_c.cpp:113-123` - getc: a0=0x41; putc: a0=0x42, a1=znak; ecall.
-3. `src/riscv.cpp` (case 0x41/0x42) - jezgro NE dira hardver
-   direktno: pozove `__getc()` / `__putc(znak)` iz console.lib. te
-   funkcije rade nad SVOJIM baferima; ako bafer nije spreman (nema znaka /
-   nema mesta), CEKAJU - i dok cekaju SAME privremeno dozvole prekide.
-4. pritisak tastera / kontroler spreman -> konzolni prekid -> ponovo
-   `trapHandler` (moguce UGNJEZDENO, usred koraka 3!) -> `handleSupervisorTrap`
-   grana code==9 -> `console_handler()` - on sam odradi plic_claim/
-   plic_complete i prebaci znakove kontroler<->baferi.
-5. povratak iz ugnjezdenog trapa nazad u __getc/__putc koji sada imaju
-   sta im treba, pa se syscall zavrsava normalnim putem (flow 2).
+ulazni smer (getc):
+
+1. `test/printing.cpp` / meni - `getc()` -> a0=0x41, ecall.
+2. `src/riscv.cpp` (case 0x41) -> `CCB::getc()`: `wait(inputItems)`.
+   bafer prazan -> nit BLOKIRA bas tu, usred jezgra, identicno kao na
+   semaforu (flow 6) - njeni sepc/sstatus cekaju u lokalima na njenom
+   steku. procesor odmah dobija druga spremna nit.
+3. pritisak tastera -> konzolni prekid (top=1, code=9) -> trap ->
+   `CCB::handleInterrupt()`: MI radimo `plic_claim()`, pokupimo znakove
+   iz kontrolera u ulazni bafer dok ih ima, `signal(inputItems)` po
+   znaku (budi cekaca!), `plic_complete()`.
+4. blokirana nit dodje na red -> nastavi iz wait-a, uzme znak sa head-a,
+   vrati ga kroz a0 -> sret -> korisnik dobio karakter.
+
+izlazni smer (putc):
+
+1. `putc(c)` -> a0=0x42, a1=znak, ecall -> `CCB::putc`.
+2. `wait(outputSpace)` - pun bafer blokira POZIVAOCA dok se ne oslobodi
+   mesto; inace odmah: znak na tail, `signal(outputItems)`.
+3. IZLAZNA NIT JEZGRA (sistemska, rodjena u `CCB::init`) zivi u petlji:
+   `wait(outputItems)` (prazan bafer = spava) -> uzme znak sa head-a ->
+   PROZIVA bit spremnosti kontrolera -> upise u CONSOLE_TX_DATA ->
+   `signal(outputSpace)`.
+4. pred gasenje: main vrti `while (!CCB::outputEmpty()) thread_dispatch()`
+   da izlazna nit isprazni bafer - inace poslednje poruke nestaju.
 
 kljucne tacke:
-- ugnjezdeni trap ne pravi haos ZATO sto handleSupervisorTrap drzi sepc/sstatus
-  u lokalima (flow 2, korak 6) - svaki nivo ima svoje vrednosti na steku.
-- __getc ceka DRZECI procesor (pusta prekide, ali sam nikad ne ustupa) -
-  ali posto pusta prekide, TAJMER moze da ga preotme (lekcija 11): nit
-  se zamrzne usred cekanja u jezgru, druge niti rade, pa se cekanje
-  nastavi. zato testovi 3/4 teku kontinualno.
-- nas kod NIGDE ne zove plic_claim/plic_complete - to radi console_handler.
+- konzola je dva odvojena proizvodjac/potrosac para: ulaz (prekidna
+  rutina proizvodi, getc trosi) i izlaz (putc proizvodi, nit jezgra trosi).
+- getc vise NE drzi procesor dok ceka - nit uredno spava u redu semafora;
+  za kontinualan tok testova 3/4 vise nije presudno preotimanje.
+- plic_claim/plic_complete sada zovemo MI (u CCB::handleInterrupt) -
+  console_handler vise ne postoji u projektu.
+- nista od ovoga ne trazi mutex: getc/putc rade u trapu (prekidi
+  maskirani), izlazna nit radi u s-modu sa maskiranim prekidima, a
+  prekidna rutina je i sama trap - sva tri konteksta su atomska.
 
 ---
 
@@ -385,6 +398,6 @@ kljucne tacke:
    globalne iz _new.cpp?
 8. objasni put karaktera od pritiska tastera do povratka iz getc - kroz
    koje bafere prolazi i ko ga prebacuje na svakom koraku?
-9. sta se desi kad tajmerski prekid stigne dok __putc ceka mesto u
-   izlaznom baferu? nabroj trapove koji su u tom trenutku "otvoreni".
+9. sta se desi kad nit pozove putc a izlazni bafer je pun? gde tacno
+   spava i ko je budi?
 10. zasto main ceka kraj userMain-a preko zastavice, a ne preko rucke niti?
