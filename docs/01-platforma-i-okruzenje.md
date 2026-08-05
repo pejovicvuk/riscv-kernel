@@ -24,7 +24,8 @@ hw.lib (pristup hardveru)      <- daje fakultet
 
 ## build i pokretanje
 
-- radi se kroz docker container koji vidi projekat na `/work`
+- radi se kroz container (na macu: apple `container` cli; na fakultetu:
+  data vmware virtuelna masina sa CLion-om) koji vidi projekat na `/work`
 - `make` - prevodjenje, `make qemu` - pokretanje, izlaz iz qemu: `ctrl-a` pa `x`
 - `make clean && make` kad make "ne vidi" izmene (cest slucaj kod izmena samo u headerima)
 - zaustavljanje emulatora iz koda: upis 32-bitne vrednosti `0x5555` na adresu `0x100000`
@@ -62,7 +63,7 @@ hw.lib (pristup hardveru)      <- daje fakultet
 - `build/src/*.lst` - asemblerski listing svakog fajla (dokaz sta je stvarno prevedeno)
 - `kernel.asm` - disasembliran ceo kernel (trazi adresu iz sepc-a kad nesto pukne!)
 - `make qemu 2>&1 | tee /work/out.txt` - snimi ceo izlaz kad terminal poplavi
-- `kputs`/`kputhex` iz `h/print.hpp` - direktan polling ispis, radi i usred
+- `kputs`/`kputhex` iz `inc/print.hpp` - direktan polling ispis, radi i usred
   prekidne rutine (debug alat, ne deo resenja)
 - panika u `handleSupervisorTrap`: nepoznat uzrok ispisuje `cause` + `sepc` i gasi emulator -
   nikad vise tiha beskonacna petlja

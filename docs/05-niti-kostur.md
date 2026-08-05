@@ -1,6 +1,6 @@
 # 05 - niti: TCB, Scheduler i promena konteksta
 
-fajlovi: `h/tcb.hpp`, `src/tcb.cpp`, `h/scheduler.hpp`, `src/scheduler.cpp`,
+fajlovi: `inc/tcb.hpp`, `src/tcb.cpp`, `inc/scheduler.hpp`, `src/scheduler.cpp`,
 `src/contextSwitch.S`
 
 ## sta je nit, fizicki
@@ -303,14 +303,21 @@ ucita isti ra/sp: bezopasno, samo malo uzalud posla. kad while uslov konacno
 padne (obe finished), main izadje iz petlje, ispise poruku i vrati se u main()
 -> uredan halt.
 
-## sledece (todo)
+## sta je doslo posle (sve uradjeno)
 
-- [ ] thread_create/exit/dispatch kao sistemski pozivi (0x11/0x12/0x13) + c api
-- [ ] oslobadjanje tcb-a i steka gotove niti (thread_exit)
-- [ ] userMain kao prava nit
-- [ ] niti u korisnickom rezimu (sret sa SPP=0) - trazi ga javni test 7;
-      maska se tada seli iz sstatus.SIE u sie registar
-- [ ] semafori (zadatak 3)
+- [x] thread_create/exit/dispatch kao sistemski pozivi + c api -> lekcija 06
+- [x] oslobadjanje tcb-a i steka gotove niti (zombi mehanizam) -> lekcija 06
+- [x] userMain kao prava nit -> lekcija 08
+- [x] niti u korisnickom rezimu (sret sa SPP=0) -> lekcija 07
+- [x] semafori (zadatak 3) -> lekcija 09
+- [x] deljenje vremena (preotimanje) -> lekcija 11
+- [x] time_sleep, prava konzola, PeriodicThread -> lekcija 12
+
+napomena: primeri koda u ovoj lekciji su SNIMAK iz vremena kad su niti
+tek nastale (pre sistemskih poziva!) - createThread jos nema stek/rezim
+argumente, dispatch jos sadrzi get() u sebi, a threadWrapper nema
+reapZombie ni spust u u-mode. koncepti (falsifikat, kofer, wrapper,
+zombi ideja) vaze i danas; tacan tekuci kod citaj kroz lekciju 10.
 
 ## pitanja za odbranu
 

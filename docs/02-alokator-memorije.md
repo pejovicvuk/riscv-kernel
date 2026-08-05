@@ -1,6 +1,6 @@
 # 02 - alokator memorije (zadatak 1)
 
-fajlovi: `h/memoryAllocator.hpp`, `src/memoryAllocator.cpp`
+fajlovi: `inc/memoryAllocator.hpp`, `src/memoryAllocator.cpp`
 
 ## ideja u jednoj recenici
 

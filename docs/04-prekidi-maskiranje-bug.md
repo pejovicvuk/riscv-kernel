@@ -20,12 +20,15 @@ prekid stize -> da li je vrsta dozvoljena?   (sie: ssie/seie - vazi uvek)
              -> oba "da": trap na stvec.  inace: zahtev ceka u sip-u.
 ```
 
-posledica: nasa trenutna maska (`sstatus.SIE = 0` u main-u) radi jer SVE trenutno
-radi u sistemskom rezimu. cim niti budu u korisnickom rezimu (test 7 to trazi!),
-maska se seli u `sie` registar.
+posledica (iz vremena ove lekcije): tadasnja maska `sstatus.SIE = 0` u
+main-u radila je samo zato sto je SVE jos radilo u sistemskom rezimu. cim
+su niti presle u korisnicki rezim (test 7 to trazi!), maska se preselila
+u `sie` registar - tako je i danas (lekcija 07). u konacnom stanju su oba
+sie bita UKLJUCENA (konzola + tajmer, lekcije 11/12), a sstatus.SIE = 1
+postoji uz njih da prekidi stizu i dok je main (s-mode) na procesoru.
 
-maska je samoodrziva kroz trapove: hardver na ulasku snimi `SPIE <- SIE(=0)`,
-a `sret` vrati `SIE <- SPIE(=0)`. nula radja nulu.
+maska je samoodrziva kroz trapove: hardver na ulasku snimi `SPIE <- SIE`,
+a `sret` vrati `SIE <- SPIE`. (u vreme ove lekcije: nula radja nulu.)
 
 ## specificnosti nase platforme
 

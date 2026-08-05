@@ -1,7 +1,7 @@
 # 09 - semafori (zadatak 3)
 
-fajlovi: `h/scb.hpp`, `src/scb.cpp`, izmene u `h/tcb.hpp`, `src/tcb.cpp`,
-`src/riscv.cpp` (0x21-0x26), `h/syscall_c.h`, `src/syscall_c.cpp`
+fajlovi: `inc/scb.hpp`, `src/scb.cpp`, izmene u `inc/tcb.hpp`, `src/tcb.cpp`,
+`src/riscv.cpp` (0x21-0x26), `inc/syscall_c.h`, `src/syscall_c.cpp`
 
 ## ideja u jednoj recenici
 

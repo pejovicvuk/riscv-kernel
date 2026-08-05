@@ -1,6 +1,6 @@
 # 11 - deljenje vremena (preotimanje na tajmerski prekid)
 
-fajlovi: `src/riscv.cpp` (grana code==1), `h/tcb.hpp` + `src/tcb.cpp`
+fajlovi: `src/riscv.cpp` (grana code==1), `inc/tcb.hpp` + `src/tcb.cpp`
 (tick, usedTicks, timeSlice, reset u switchToNext), `src/main.cpp`
 (redosled ukljucivanja prekida)
 
@@ -18,18 +18,19 @@ bez njenog znanja i pristanka. to je asinhrona promena konteksta.
 
 ## flow
 
-1. nit radi bilo sta (u-mode; ili ceka u __getc u s-modu - i to se
-   prekida, jer __getc pusta prekide dok ceka)
+1. nit radi bilo sta u u-modu (sie vazi i tamo, sstatus.SIE se ignorise)
 2. tajmerski otkucaj -> trap -> trap.S sacuva registre na
    stek niti -> handleSupervisorTrap, grana code==1
 3. `Riscv::mc_sip(SIP_SSIP)` - potvrdi prijem (PRE eventualne promene
    niti - inace bi zahtev ostao da visi)
-4. `TCB::tick()` - usedTicks++, poredi sa running->timeSlice.
+4. `TCB::wakeSleepers()` - probudi niti kojima je isteklo time_sleep
+   vreme (lekcija 12); budjenje ide PRE naplate kvantuma
+5. `TCB::tick()` - usedTicks++, poredi sa running->timeSlice.
    nije isteklo -> povratak, nit nista ne primeti
-5. isteklo -> `TCB::dispatch()` - ISTA masinerija kao kod dobrovoljnog
+6. isteklo -> `TCB::dispatch()` - ISTA masinerija kao kod dobrovoljnog
    dispatch-a (lekcija 10, flow 4). nit se zamrzne usred svoje prekidne
    obrade: sepc/sstatus cekaju u lokalima na njenom steku
-6. kad opet dodje na red: odmota se kroz SVOJ trap, sret, nastavlja od
+7. kad opet dodje na red: odmota se kroz SVOJ trap, sret, nastavlja od
    prekinute instrukcije - "vreme joj je preskocilo", nista vise
 
 ## projektne odluke (studentove, za odbranu)
@@ -66,13 +67,15 @@ inicijalizacije je deo dizajna, ne kozmetika!
 
 ## posledice po ponasanje
 
-- testovi 3/4: cifre teku KONTINUALNO bez kucanja (proizvodjaci dobijaju
-  procesor i dok tastaturna nit ceka u __getc) - overeno 2026-07-21
+- testovi 3/4: cifre teku KONTINUALNO bez kucanja - tastaturna nit vise
+  ne drzi procesor dok ceka (u vreme console.lib to je resavalo bas
+  preotimanje; sa nasom konzolom iz lekcije 12 nit koja ceka znak uredno
+  BLOKIRA, pa preotimanje za ovo vise nije ni potrebno)
 - testovi 1/2: preplitanje A/B/C/D izgleda izmesanije (smena i na kvantum,
   ne samo na dispatch) - marker "C: t1=7" i fibonacci vrednosti ostaju
-- sistem sada ima preotimanje i TOKOM koda jezgra (samo u __getc/__putc
-  cekanjima - jedina mesta gde su prekidi ukljuceni unutar jezgra);
-  ostatak jezgra radi sa iskljucenim prekidima = prirodna kriticna sekcija
+- kod jezgra se NE preotima: u jezgro se ulazi trapom (hardver gasi
+  sstatus.SIE na ulasku), a niko unutar jezgra prekide ne pusta =
+  ceo kod jezgra je prirodna kriticna sekcija (pdf str. 20)
 
 ## pitanja za odbranu
 
@@ -84,4 +87,5 @@ inicijalizacije je deo dizajna, ne kozmetika!
 5. sta sve mora da prezivi preotimanje (t-registri, a0, sepc/sstatus) i
    ko od njih koga cuva?
 6. moze li preotimanje da prekine jezgro usred rada sa scheduler-om ili
-   semaforom? zasto ne? (prekidi u jezgru iskljuceni osim u __getc/__putc)
+   semaforom? zasto ne? (u jezgro se ulazi trapom - hardver gasi
+   sstatus.SIE, i niko ga unutra ne pali nazad)

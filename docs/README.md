@@ -5,6 +5,23 @@ svaka lekcija ima "flow" primere - korak po korak kako se stvari desavaju.
 ovo je ujedno i priprema za odbranu: na kraju svake lekcije su pitanja
 na koja treba znati odgovor.
 
+## kako citati (za nekog ko projekat vidi prvi put)
+
+1. procitaj lekcije 01-04 redom: platforma, alokator, trap/ecall, prekidi -
+   to je temelj bez kog nista dalje nema smisla
+2. lekcije 05-07: niti - prvo koncept (05), pa kroz sistemske pozive (06),
+   pa spust u korisnicki rezim (07). pazi: primeri koda u 05 su istorijski
+   snimak (napomena na kraju te lekcije kaze sta se od tada promenilo)
+3. lekcije 08-09: zvanicni testovi i semafori
+4. lekcija 10 je GLAVNA MAPA: 7 flowova kroz tekuci kod, od korisnicke
+   linije do jezgra i nazad - citaj je sa otvorenim kodom
+5. lekcije 11-12: zadatak 4 - deljenje vremena, pa time_sleep + konzola +
+   PeriodicThread
+
+lekcije su pisane hronoloski i cuvaju istoriju odluka (i pogresnih
+pokusaja - oni se brane!). gde je kasnija lekcija promenila nesto,
+ranija ima napomenu na vrhu ili na mestu izmene.
+
 ## sadrzaj
 
 | # | lekcija | status |
@@ -16,13 +33,18 @@ na koja treba znati odgovor.
 | 05 | [niti - TCB, Scheduler, promena konteksta](05-niti-kostur.md) | gotovo |
 | 06 | [niti kroz sistemske pozive](06-sistemski-pozivi-niti.md) | gotovo |
 | 07 | [niti u korisnickom rezimu (u-mode)](07-u-mode-niti.md) | gotovo |
-| 08 | [zvanicni testovi + polling konzola](08-zvanicni-testovi.md) | gotovo |
+| 08 | [zvanicni testovi + console.lib konzola (istorija)](08-zvanicni-testovi.md) | gotovo |
 | 09 | [semafori (zadatak 3)](09-semafori.md) | gotovo |
 | 10 | [vodic kroz flowove (citanje koda)](10-vodic-kroz-flowove.md) | gotovo |
 | 11 | [deljenje vremena (preotimanje)](11-deljenje-vremena.md) | gotovo |
-| 12 | [zadatak 4 u celosti: sleep, konzola, PeriodicThread](12-zadatak4-sleep-konzola.md) | gotovo - ceka testiranje |
+| 12 | [zadatak 4 u celosti: sleep, konzola, PeriodicThread](12-zadatak4-sleep-konzola.md) | gotovo |
 
-## trenutno stanje projekta
+## trenutno stanje projekta: SVE (zadaci 1-4) GOTOVO I OVERENO
+
+svi zvanicni testovi prolaze (2026-08-05): 1, 2, 3, 4, 5, 6 i 7
+(test 7 "prolazi padom" - ocekivan PANIC cause=2).
+
+istorija po celinama:
 
 - zadatak 1 (alokator): KOMPLETAN - mem_alloc i mem_free kroz ceo ecall lanac,
   spajanje dokazano (heap se vraca u jedan blok, nula curenja)
@@ -31,18 +53,17 @@ na koja treba znati odgovor.
 - zadatak 2 (niti): KOMPLETAN - ZVANICNI TESTOVI 1 i 7 PROLAZE (2026-07-20).
   syscalls 0x11-0x13, c api, u-mode tela, zombi ciscenje, t-registri prezivljavaju
   dispatch (test 1: "C: t1=7")
-- konzola (2026-07-21, VAZNA ISPRAVKA): getc/putc preko console.lib
-  (__getc/__putc + console_handler na prekid, pdf str. 31) umesto naseg
-  pollinga; sie bitovi 1 i 9 ukljuceni; userMain je sada NIT (pdf str. 4);
-  svi testovi ponovo overeni posle izmene
+- konzola, 20p faza (2026-07-21): getc/putc preko console.lib
+  (__getc/__putc + console_handler, pdf: obaveza za one koji NE rade
+  zadatak 4) umesto naseg pollinga; userMain je postao NIT (pdf str. 4).
+  ova faza je ISTORIJA - vidi lekciju 08 (zasto je tako moralo tada)
+  i lekciju 12 (cime je zamenjena)
 - zadatak 3 (semafori): ZVANICNI TEST 3 PROLAZI (2026-07-19); test 1 regresija ok.
   scb, pozivi 0x21-0x26, trece stanje niti (blokirana), switchToNext refaktor,
   globalni new/delete za korisnicki sloj (_new.cpp)
 - c++ api (syscall_cpp.hpp/.cpp): GOTOV - ZVANICNI TESTOVI 2 i 4 PROLAZE
   (2026-07-20). Thread/Semaphore/PeriodicThread/Console kao tanki omotaci;
-  runWrapper bira body ili run() (pdf pravilo); sleep i PeriodicThread su
-  stub do zadatka 4. TIME JE SEKCIJA OD 20 POENA KOMPLETNO OVERENA
-  (testovi 1, 2, 3, 4 i 7 svi prolaze)
+  runWrapper bira body ili run() (pdf pravilo)
 - preimenovanje na skolske konvencije (2026-07-21, projektna odluka):
   trapHandlers.cpp -> riscv.cpp + klasa Riscv
   (csr helperi r_/w_/ms_/mc_ umesto sirovih asm blokova); handleTrap ->
@@ -52,23 +73,34 @@ na koja treba znati odgovor.
   logika NIJE menjana;
   unutrasnjost TCB-a (switchToNext, reapZombie, userWrapper, systemLevel)
   namerno zadrzana nasa - to su nase projektne odluke
-- DELJENJE VREMENA (2026-07-21, odluka studenta - obim kao kolegin
-  projekat): preotimanje na tajmerski prekid - TCB::tick + dispatch iz
-  grane code==1, kvantum timeSlice po niti, reset u switchToNext,
-  prekidi u main-u tek posle nulte niti. testovi 3/4 sada teku
-  KONTINUALNO (overeno)
+- DELJENJE VREMENA (2026-07-21): preotimanje na tajmerski prekid -
+  TCB::tick + dispatch iz grane code==1, kvantum timeSlice po niti,
+  reset u switchToNext, prekidi u main-u tek posle nulte niti.
+  testovi 3/4 od tada teku KONTINUALNO (overeno)
 - ZADATAK 4 U CELOSTI (2026-08-05, lekcija 12): time_sleep 0x31 (lista
   uspavanih sa relativnim razlikama u TCB), PRAVA KONZOLA - nova klasa
   CCB (kruzni baferi + 3 SCB semafora + izlazna sistemska nit; prekidna
   rutina sama radi plic_claim/complete), console.lib IZBACENA iz
   Makefile-a; Thread::sleep i PeriodicThread (terminate preko period=0,
   run() redefinisan); main pred gasenje prazni izlazni bafer (drain).
-  uvezeni testovi 5 i 6, LEVEL_4=1. CEKA: make clean && make + provera
-  svih testova 1-7 (regresija 1,2,3,4,7 + novi 5,6)
+  uvezeni testovi 5 i 6, LEVEL_4=1. OVERENO: svi testovi 1-7 prolaze
+  (regresija 1,2,3,4,7 + novi 5,6)
+
+## slojevi sistema (velika slika)
+
+```
+korisnicki program (test/)          <- zvanicni testovi + nas test 8
+c++ api (Thread, Semaphore...)      <- tanki omotac oko c api-ja
+c api (mem_alloc, thread_...)       <- pakuje registre + ecall
+abi (ecall, a0=kod, a1..=argumenti) <- softverski prekid
+jezgro (TCB, Scheduler, SCB, CCB,   <- srce; ulaz SAMO kroz trap.S,
+        MemoryAllocator)               izlaz SAMO kroz sret
+hw.lib (pristup hardveru)           <- daje fakultet
+```
 
 ## kako radimo
 
 1. novi kod + objasnjenje toka prostim jezikom
 2. citanje koda liniju po liniju
-3. "jasno" -> kontrolna pitanja -> sledeca celina
+3. kontrolna pitanja -> sledeca celina
 4. posle svake celine: update ovih lekcija

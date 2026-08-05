@@ -6,7 +6,7 @@
 > verzija morala console.lib (pdf str. 31) i kako se do toga doslo.
 
 fajlovi: `test/` (zvanicni fajlovi), `src/userMain.cpp` (zvanicni meni,
-prilagodjen), `h/syscall_c.h` (preimenovan sa .hpp), `src/riscv.cpp`
+prilagodjen), `inc/syscall_c.h` (preimenovan sa .hpp), `src/riscv.cpp`
 (case 0x41/0x42 + grana za konzolni prekid), `src/syscall_c.cpp` (getc/putc),
 `lib/console.h` (dato: __getc, __putc, console_handler)
 

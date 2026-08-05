@@ -1,6 +1,6 @@
 # 07 - niti u korisnickom rezimu (u-mode)
 
-fajlovi: `src/tcb.cpp`, `h/tcb.hpp`, `src/main.cpp`
+fajlovi: `src/tcb.cpp`, `inc/tcb.hpp`, `src/main.cpp`
 
 ## zasto
 
@@ -20,10 +20,12 @@ jedini test koji prolazi tako sto program pukne.
    prostor bez memorijske zastite, pa je citanje fizicki moguce i pouzdano;
    granica privilegija su INSTRUKCIJE (csr/sret), ne memorija. alternativa
    (registri + sret u asm-u) je krhka na izmene.
-2. **maska prekida zivi samo u sie registru** (ssie bit 1 + seie bit 9),
-   ne vise u sstatus.SIE. razlog: sie vazi u OBA rezima (sstatus.SIE se u
-   u-modu ignorise) - jedan mehanizam za celu pricu; u zadatku 4 se biti
-   samo ukljuce nazad.
+2. **maska prekida zivi u sie registru** (ssie bit 1 + seie bit 9).
+   razlog: sie vazi u OBA rezima (sstatus.SIE se u u-modu ignorise) -
+   jedan mehanizam za celu pricu. (u ovoj fazi su oba bita bila UGASENA;
+   od lekcije 08/11 su ukljucena, a sstatus.SIE=1 postoji uz njih samo da
+   prekidi stizu i dok je main u s-modu na procesoru - vidi lekciju 04
+   za dvospratni model odlucivanja.)
 
 ## kako se nit spusta u u-mode - flow rodjenja (dopunjen)
 

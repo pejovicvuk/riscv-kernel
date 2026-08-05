@@ -1,7 +1,7 @@
 # 06 - niti kroz sistemske pozive (thread_create/exit/dispatch)
 
-fajlovi: `src/riscv.cpp`, `src/syscall_c.cpp`, `h/syscall_c.hpp`,
-`src/tcb.cpp`, `h/tcb.hpp`
+fajlovi: `src/riscv.cpp`, `src/syscall_c.cpp`, `inc/syscall_c.h`,
+`src/tcb.cpp`, `inc/tcb.hpp`
 
 ## projektne odluke (moje, obrazlozene)
 

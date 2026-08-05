@@ -1,6 +1,6 @@
 # 03 - trap, ecall i sistemski pozivi
 
-fajlovi: `src/trap.S`, `src/riscv.cpp`, `src/syscall_c.cpp`, `h/syscall_c.hpp`
+fajlovi: `src/trap.S`, `src/riscv.cpp`, `src/syscall_c.cpp`, `inc/syscall_c.h`
 
 ## ideja u jednoj recenici
 

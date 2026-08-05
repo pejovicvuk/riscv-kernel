@@ -14,17 +14,17 @@ znanje iz prethodnih. ne preskaci.
 | sloj | fajl | uloga |
 |------|------|-------|
 | korisnicki program | `test/*.cpp`, `src/userMain.cpp` | zvanicni testovi; ne zna nista o jezgru, zna samo api |
-| c++ api | `h/syscall_cpp.hpp`, `src/syscall_cpp.cpp` | klase Thread/Semaphore/Console - tanki omotaci oko c api-ja |
+| c++ api | `inc/syscall_cpp.hpp`, `src/syscall_cpp.cpp` | klase Thread/Semaphore/Console - tanki omotaci oko c api-ja |
 | new/delete | `src/_new.cpp` | globalni new/delete korisnickog sloja -> mem_alloc/mem_free |
-| c api | `h/syscall_c.h`, `src/syscall_c.cpp` | funkcije koje pakuju argumente u registre i rade `ecall` |
+| c api | `inc/syscall_c.h`, `src/syscall_c.cpp` | funkcije koje pakuju argumente u registre i rade `ecall` |
 | kapija | `src/trap.S` | jedini ulaz u jezgro (stvec pokazuje ovde); cuva/vraca registre |
 | razvodnik | `src/riscv.cpp` | `handleSupervisorTrap`: cita scause, grana se po kodu poziva |
-| jezgro-niti | `h/tcb.hpp`, `src/tcb.cpp` | TCB, threadWrapper/userWrapper, dispatch, zombi |
+| jezgro-niti | `inc/tcb.hpp`, `src/tcb.cpp` | TCB, threadWrapper/userWrapper, dispatch, zombi |
 | jezgro-zamena | `src/contextSwitch.S` | zamrzni jednu nit, odmrzni drugu |
-| jezgro-red | `h/scheduler.hpp`, `src/scheduler.cpp` | fifo red spremnih niti |
-| jezgro-semafori | `h/scb.hpp`, `src/scb.cpp` | SCB: brojac + fifo red blokiranih |
-| jezgro-memorija | `h/memoryAllocator.hpp`, `src/memoryAllocator.cpp` | slobodna lista, first-fit |
-| jezgro-konzola | `h/ccb.hpp`, `src/ccb.cpp` | CCB: nasi baferi + izlazna nit (zadatak 4, lekcija 12) |
+| jezgro-red | `inc/scheduler.hpp`, `src/scheduler.cpp` | fifo red spremnih niti |
+| jezgro-semafori | `inc/scb.hpp`, `src/scb.cpp` | SCB: brojac + fifo red blokiranih |
+| jezgro-memorija | `inc/memoryAllocator.hpp`, `src/memoryAllocator.cpp` | slobodna lista, first-fit |
+| jezgro-konzola | `inc/ccb.hpp`, `src/ccb.cpp` | CCB: nasi baferi + izlazna nit (zadatak 4, lekcija 12) |
 | start/kraj | `src/main.cpp` | podesavanje masine, nulta nit, CCB::init, userMain kao nit |
 
 kljucna slika koju drzi ceo projekat: **korisnicki sloj i jezgro su u istom
@@ -41,22 +41,27 @@ fajl: `src/main.cpp` (ceo, kratak je)
 
 1. fakultetska biblioteka (hw.lib) podize masinu, ispise "xv6 kernel is
    booting" i pozove nas `main()` - u SISTEMSKOM rezimu.
-2. `main.cpp` (csrw stvec) - u `stvec` se upisuje adresa `trapHandler`-a
-   iz trap.S. od ovog trenutka svaki ecall/izuzetak/prekid skace TU i samo tu.
-3. `main.cpp` (sie blok) - prekidi PO VRSTI u `sie` registru se UKLJUCUJU:
-   konzola (seie, bit 9) mora da bude ziva jer console_handler na svaki
-   njen prekid puni/prazni bafere console.lib (lekcija 08); tajmer (ssie,
-   bit 1) je odmaskiran ali se za sada samo potvrdjuje - prava obrada je
-   zadatak 4. zasto bas `sie`: on vazi i u korisnickom rezimu, gde se
-   sstatus.SIE ignorise (lekcija 04/07).
-4. `main.cpp` (sstatus blok) - `sstatus.SIE = 1`: da prekidi stizu i dok
-   je main (s-mode) na procesoru; u-mode niti ovaj bit ne gledaju.
-5. `main.cpp` - `MemoryAllocator::init()`: heap postaje jedan veliki
+2. `main.cpp` (csrw stvec) - u `stvec` se upisuje adresa ulazne tacke
+   `trap` iz trap.S. od ovog trenutka svaki ecall/izuzetak/prekid skace
+   TU i samo tu.
+3. `main.cpp` - `MemoryAllocator::init()`: heap postaje jedan veliki
    slobodan blok.
-6. `main.cpp` - main dobija svoj TCB ("nulta nit", systemLevel=true)
+4. `main.cpp` - main dobija svoj TCB ("nulta nit", systemLevel=true)
    sa PRAZNIM kontekstom i bez steka. zasto: kad main prvi put ustupi
    procesor, mora da postoji mesto gde ce se zamrznuti (flow 4).
-7. `main.cpp` - pdf str. 4: main "pokrece NIT nad funkcijom userMain" -
+5. `main.cpp` - `CCB::init()` (lekcija 12): konzolni baferi, semafori i
+   izlazna nit jezgra - PRE prekida, da prvi konzolni prekid zatekne
+   spremne bafere.
+6. `main.cpp` (sie blok) - prekidi PO VRSTI u `sie` registru se
+   UKLJUCUJU: konzola (seie, bit 9) - nas CCB::handleInterrupt puni
+   ulazni bafer; tajmer (ssie, bit 1) - deljenje vremena + budjenje
+   uspavanih. zasto bas `sie`: vazi i u korisnickom rezimu, gde se
+   sstatus.SIE ignorise (lekcija 04/07). zasto tek SAD: tajmerski tick
+   cita TCB::running - nulta nit mora da postoji pre prvog prekida
+   (lekcija 11).
+7. `main.cpp` (sstatus blok) - `sstatus.SIE = 1`: da prekidi stizu i dok
+   je main (s-mode) na procesoru; u-mode niti ovaj bit ne gledaju.
+8. `main.cpp` - pdf str. 4: main "pokrece NIT nad funkcijom userMain" -
    obicnim `thread_create` (ecall radi i iz s-moda!) nad omotacem
    `userMainWrapper`, pa se vrti u `while (!userMainDone) thread_dispatch()`
    i ustupa procesor dok korisnicki program ne zavrsi. meni testova time
@@ -64,11 +69,15 @@ fajl: `src/main.cpp` (ceo, kratak je)
    caka: kraj se ceka preko zastavice `userMainDone` koju omotac digne
    PRE thread_exit-a - ne preko rucke niti, jer tcb zavrsene niti pojede
    zombi ciscenje (flow 5), pa bi citanje rucke bilo use-after-free.
-8. `main.cpp` - kad zastavica padne: upis 0x5555 na 0x100000 gasi emulator.
+9. `main.cpp` - kad zastavica padne: prvo drain petlja
+   (`while (!CCB::outputEmpty()) thread_dispatch()`) da izlazna nit
+   posalje poslednje znakove, pa upis 0x5555 na 0x100000 gasi emulator.
 
-kljucna tacka: main NIJE posebna magija - posle koraka 6 on je obicna
+kljucna tacka: main NIJE posebna magija - posle koraka 4 on je obicna
 nit medju nitima (uvek spreman, nikad blokiran), samo sto je prvi i sto
-mu kontekst pise tek prvi dispatch.
+mu kontekst pise tek prvi dispatch. bas zato sto se NIKAD ne blokira,
+main je i nas "idle": scheduler nikad nije prazan, pa "nema spremnih
+niti" panika ne preti ni kad sve korisnicke niti spavaju (test 5).
 
 ---
 
@@ -94,17 +103,17 @@ fajlovi redom: `_new.cpp` -> `syscall_c.cpp` -> `trap.S` ->
 5. `src/trap.S:28` - `call handleSupervisorTrap`. registri a0..a4 u tom trenutku
    jos drze vrednosti koje je korisnik spakovao - pa ih c funkcija vidi
    kao svoje parametre. to je cela "magija" prenosa argumenata.
-6. `src/riscv.cpp:13-19` - scause/sepc/sstatus se ODMAH citaju u
+6. `src/riscv.cpp:13-20` - scause/sepc/sstatus se ODMAH citaju u
    lokalne promenljive. zasto lokalne: one zive na steku OVE niti; ako
    obrada promeni nit, globalne csr-ove ce gaziti tudji trapovi, a nase
    vrednosti mirno cekaju na nasem steku (flow 4 i 6 zive od ovoga).
-7. `src/riscv.cpp:40-42` - grana za ecall: `sepc += 4` u LOKALNOJ
+7. `src/riscv.cpp:47-49` - grana za ecall: `sepc += 4` u LOKALNOJ
    kopiji - da se po povratku nastavi IZA ecall-a, ne na njemu.
-8. `src/riscv.cpp:44-47` - `switch (a0)`, slucaj 0x01: poziv
+8. `src/riscv.cpp:51-53` - `switch (a0)`, slucaj 0x01: poziv
    `MemoryAllocator::alloc(a1 * MEM_BLOCK_SIZE)`. procitaj i sam alokator
    (`src/memoryAllocator.cpp`): first-fit kroz slobodnu listu, heder u
    prvih 16B, ostatak bloka nazad u listu.
-9. `src/riscv.cpp:114-116` - pred izlaz: nasi lokalni sstatus i
+9. `src/riscv.cpp:125-128` - pred izlaz: nasi lokalni sstatus i
    sepc se VRACAJU u csr-ove; `return ret` stavlja rezultat u a0.
 10. `src/trap.S:30-46` - vrati sve sacuvane registre (a0 NE - u njemu je
     rezultat), `sret`: pc=sepc (instrukcija iza ecall-a), rezim=SPP.
@@ -141,20 +150,20 @@ fajlovi redom: test -> `syscall_cpp.cpp` -> `syscall_c.cpp` ->
    prolaz kroz ceo flow 2!), pa spakuje a0=0x11, a1=&myHandle,
    a2=runWrapper, a3=this, a4=stek; `ecall`. (pdf abi: stek daje
    pozivalac, ne jezgro.)
-6. `src/riscv.cpp:51-57` - slucaj 0x11: poziv
+6. `src/riscv.cpp:58-64` - slucaj 0x11: poziv
    `TCB::createThread(telo, arg, stek, systemLevel=false)` - false jer
    niti nastale syscall-om izvrsavaju telo u korisnickom rezimu.
-7. `src/tcb.cpp:69-91` - `createThread`: `new TCB(...)` - PAZI, ovo je
-   TCB-ov SOPSTVENI operator new (`tcb.cpp:14-16`) koji ide DIREKTNO na
+7. `src/tcb.cpp:75-97` - `createThread`: `new TCB(...)` - PAZI, ovo je
+   TCB-ov SOPSTVENI operator new (`tcb.cpp:17-19`) koji ide DIREKTNO na
    MemoryAllocator, bez ecall-a (jezgro ne sme ecall iz trapa - pregazio
    bi sopstveni sepc). zatim bootstrap prevara:
    - `context.sp = vrh steka - 96` (mesto za 12 laznih s-registara, nule)
    - `context.ra = &threadWrapper`
    - falsifikovana je "proslost": nit izgleda kao da je zaspala na ulazu
      u threadWrapper (flow 4 objasnjava zasto bas takav oblik).
-8. `src/tcb.cpp:86` - `Scheduler::put(tcb)`: nit staje na kraj reda
+8. `src/tcb.cpp:92` - `Scheduler::put(tcb)`: nit staje na kraj reda
    spremnih (`src/scheduler.cpp:8-16`).
-9. `src/riscv.cpp:54` - `*(TCB**)a1 = tcb`: jezgro kroz pokazivac
+9. `src/riscv.cpp:61` - `*(TCB**)a1 = tcb`: jezgro kroz pokazivac
    upise rucku pravo u `myHandle` objekta Thread. ret=0.
 10. nazad kroz trap.S/sret u thread_create, pa u start(), pa u test.
 
@@ -178,13 +187,13 @@ deo 1 - nit A tone:
 1. `src/syscall_cpp.cpp:37-39` - `Thread::dispatch()` -> `thread_dispatch()`.
 2. `src/syscall_c.cpp:62-65` - a0=0x13, `ecall` -> trap.S sacuva
    registre nita A NA NJEN STEK (flow 2, korak 4).
-3. `src/riscv.cpp:62-65` - slucaj 0x13: `TCB::dispatch()`.
+3. `src/riscv.cpp:65-72` - slucaj 0x13: `TCB::dispatch()`.
    zapamti: sepc/sstatus nita A su vec bezbedni u LOKALIMA handleSupervisorTrap-a,
    na steku nita A.
-4. `src/tcb.cpp:111-115` - `dispatch()`: nit A nije gotova ->
+4. `src/tcb.cpp:119-123` - `dispatch()`: nit A nije gotova ->
    `Scheduler::put(running)` (A staje na KRAJ reda spremnih), pa
    `switchToNext()`.
-5. `src/tcb.cpp:95-105` - `switchToNext()`: old=A, next=`Scheduler::get()`
+5. `src/tcb.cpp:101-113` - `switchToNext()`: old=A, next=`Scheduler::get()`
    (recimo WorkerA); ako nema nikog spremnog - panika (deadlock);
    `running = next`; `contextSwitch(&old->context, &running->context)`.
 6. `src/contextSwitch.S:15-30` - prva polovina, jos smo nit A:
@@ -199,12 +208,12 @@ deo 2 - nit WorkerA izranja (prvi put u zivotu):
    iz flowa 3!), sp=vrh njegovog steka-96; 12 "s-registara" (nule) se
    pokupi sa steka; `ret` -> skok na threadWrapper. usli smo u funkciju
    kao nit A, izasli kao WorkerA - to je cela promena konteksta.
-8. `src/tcb.cpp:40-58` - `threadWrapper` (JOS U SISTEMSKOM rezimu - u
+8. `src/tcb.cpp:49-64` - `threadWrapper` (JOS U SISTEMSKOM rezimu - u
    trap smo usli s-modom trap handlera):
    - `reapZombie()`: rodjenje je i budjenje - pocisti eventualnog mrtvaca
    - systemLevel je false -> priprema spusta u u-mode: sepc=&userWrapper,
      sstatus.SPP=0, pa `sret`. sret je JEDINA silazna kapija.
-9. `src/tcb.cpp:63-67` - `userWrapper`, SAD U KORISNICKOM rezimu:
+9. `src/tcb.cpp:68-73` - `userWrapper`, SAD U KORISNICKOM rezimu:
    `running->body(running->arg)` - a body je runWrapper, arg je this
    (tako smo poslali u flowu 3). tcb sme da se CITA iz u-moda: isti
    adresni prostor, granica je u instrukcijama, ne u memoriji.
@@ -219,10 +228,10 @@ deo 3 - sta se desi kad nit A kasnije dodje na red:
 
 12. neka nit uradi dispatch i Scheduler::get() vrati A. contextSwitch
     ucita A-ove ra/sp -> `ret` NE vodi u threadWrapper nego NAZAD u
-    `switchToNext`, tacno iza poziva contextSwitch (`tcb.cpp:106-107`).
+    `switchToNext`, tacno iza poziva contextSwitch (`tcb.cpp:114-115`).
 13. `reapZombie()` - budjenje je uvek mesto ciscenja.
 14. povratak uz A-ov stek: switchToNext -> TCB::dispatch -> handleSupervisorTrap
-    slucaj 0x13 -> `riscv.cpp:114-116` upisuje A-ove LOKALNE
+    slucaj 0x13 -> `riscv.cpp:125-128` upisuje A-ove LOKALNE
     sepc/sstatus (koji su sve vreme cekali na A-ovom steku!) -> trap.S
     vraca A-ove registre -> `sret` -> nit A nastavlja iza svog ecall-a
     u thread_dispatch, kao da se nista nije desilo.
@@ -245,20 +254,20 @@ fajlovi redom: test -> `syscall_cpp.cpp` -> `tcb.cpp` -> `syscall_c.cpp`
 -> `riscv.cpp` -> `tcb.cpp`.
 
 1. `run()` se vrati -> vracamo se u `runWrapper` (`syscall_cpp.cpp:35`)
-   -> on se vrati u `userWrapper` (`tcb.cpp:64`).
-2. `src/tcb.cpp:65` - `thread_exit()`: iz u-moda NEMA drugog puta u
+   -> on se vrati u `userWrapper` (`tcb.cpp:70`).
+2. `src/tcb.cpp:71` - `thread_exit()`: iz u-moda NEMA drugog puta u
    jezgro osim ecall-a. (petlja `for(;;)` ispod je osiguranje - dotle
    nikad ne dolazi.)
 3. `src/syscall_c.cpp:56-60` - a0=0x12, `ecall`.
-4. `src/riscv.cpp:62-65` - slucaj 0x12:
+4. `src/riscv.cpp:65-72` - slucaj 0x12:
    `running->setFinished(true)` pa `TCB::dispatch()` - odavde za ovu nit
    nema povratka.
-5. `src/tcb.cpp:111-115` - dispatch vidi finished=true: nit NE ide u
+5. `src/tcb.cpp:119-123` - dispatch vidi finished=true: nit NE ide u
    scheduler nego u `zombie`. zasto ne oslobodimo odmah: JOS STOJIMO NA
    NJENOM STEKU - oslobodio bi se pod pod nogama.
 6. `switchToNext()` prebaci na sledecu spremnu nit; PRVA STVAR koju
-   probudjena nit uradi je `reapZombie()` (`tcb.cpp:107` ili
-   `tcb.cpp:41`) - sa SVOG, bezbednog steka oslobodi mrtvacev stek
+   probudjena nit uradi je `reapZombie()` (`tcb.cpp:115` ili
+   `tcb.cpp:42`) - sa SVOG, bezbednog steka oslobodi mrtvacev stek
    (`MemoryAllocator::free`) i TCB (`delete`).
 7. objekat WorkerA (c++ sloj) zivi i dalje! njega brise tek testov
    `delete threads[i]` - obican mem_free kroz flow 2; nas ~Thread je
@@ -283,9 +292,9 @@ fajlovi redom: `test/buffer_CPP_API.cpp` -> `syscall_cpp.cpp` ->
 deo 1 - potrosac tone u san:
 
 1. `test/buffer_CPP_API.cpp` - `get()` prvo `itemAvailable->wait()`.
-2. `src/syscall_cpp.cpp:63-65` - `Semaphore::wait()` -> `sem_wait(myHandle)`.
+2. `src/syscall_cpp.cpp:77-79` - `Semaphore::wait()` -> `sem_wait(myHandle)`.
 3. `src/syscall_c.cpp:83-88` - a0=0x23, a1=rucka, `ecall`.
-4. `src/riscv.cpp:79-81` - slucaj 0x23: `((SCB*)a1)->wait(1)`.
+4. `src/riscv.cpp:86-88` - slucaj 0x23: `((SCB*)a1)->wait(1)`.
 5. `src/scb.cpp:36-51` - `SCB::wait(1)`: value je 0 (bafer prazan) ->
    nema prolaza. nit se upisuje u red OVOG semafora (`enqueue(self)`,
    blockResult=0, pendingN=1) i zove `TCB::switchToNext()`. PAZI:
@@ -299,7 +308,7 @@ deo 1 - potrosac tone u san:
 deo 2 - proizvodjac ga budi:
 
 7. proizvodjac: `put()` -> `itemAvailable->signal()` -> ecall 0x24 ->
-   `src/riscv.cpp:82-84` -> `SCB::signal(1)`.
+   `src/riscv.cpp:89-91` -> `SCB::signal(1)`.
 8. `src/scb.cpp:53-65` - `signal`: value += 1; petlja: dok na celu reda
    ima cekaca ciji pendingN staje u value - `dequeue()`, value -=
    pendingN, blockResult=0, `Scheduler::put(t)`. potrosac je sada
@@ -310,7 +319,7 @@ deo 2 - proizvodjac ga budi:
 deo 3 - potrosac se budi:
 
 10. kad dodje na red (neciji dispatch), contextSwitch ga odmrzne: `ret`
-    vodi nazad u switchToNext (`tcb.cpp:106`), reapZombie, povratak u
+    vodi nazad u switchToNext (`tcb.cpp:114`), reapZombie, povratak u
     `SCB::wait` (`scb.cpp:50`) - i wait vrati `self->blockResult` (0).
 11. uz stek: handleSupervisorTrap upise NJEGOVE lokalne sepc/sstatus, trap.S,
     sret -> potrosac nastavlja iza ecall-a u sem_wait, dobija 0,
@@ -325,9 +334,9 @@ isti taj povratak javi niti da je cekala dzabe.
 
 1. test: `delete waitForAll` - PRVO se izvrsi destruktor, TEK ONDA
    oslobadjanje memorije objekta.
-2. `src/syscall_cpp.cpp:59-61` - `~Semaphore()`: `sem_close(myHandle)`
+2. `src/syscall_cpp.cpp:72-75` - `~Semaphore()`: `sem_close(myHandle)`
    -> ecall 0x22.
-3. `src/riscv.cpp:72-78` - slucaj 0x22: `sem->close()` pa
+3. `src/riscv.cpp:79-85` - slucaj 0x22: `sem->close()` pa
    `delete sem` (SCB-ov delete, direktno na MemoryAllocator).
 4. `src/scb.cpp:67-75` - `close()`: sve cekace probudi sa
    blockResult=-1 i vrati u scheduler - njihov wait ce vratiti gresku
