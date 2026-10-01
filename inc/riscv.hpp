@@ -3,25 +3,25 @@
 
 #include "../lib/hw.h"
 
-// pristup sistemskim (csr) registrima na jednom mestu:
+// access to system (csr) registers in one place:
 // r_ = read, w_ = write, ms_ = mask set (csrs), mc_ = mask clear (csrc)
 class Riscv {
 public:
     enum BitMaskSstatus {
-        SSTATUS_SIE  = (1 << 1),   // glavni prekidac prekida u s-modu
-        SSTATUS_SPIE = (1 << 5),   // sacuvan SIE pre trapa
-        SSTATUS_SPP  = (1 << 8),   // rezim iz kog se doslo (0=u, 1=s)
+        SSTATUS_SIE  = (1 << 1),   // global interrupt enable in s-mode
+        SSTATUS_SPIE = (1 << 5),   // SIE saved before the trap
+        SSTATUS_SPP  = (1 << 8),   // mode the trap came from (0=u, 1=s)
     };
 
     enum BitMaskSip {
-        SIP_SSIP = (1 << 1),       // zahtev softverskog prekida (tajmer)
-        SIP_SEIP = (1 << 9),       // zahtev spoljasnjeg prekida (konzola)
+        SIP_SSIP = (1 << 1),       // software interrupt pending (timer)
+        SIP_SEIP = (1 << 9),       // external interrupt pending (console)
     };
 
     enum BitMaskSie {
-        SIE_SSIE = (1 << 1),       // dozvola softverskog prekida (tajmer)
-        SIE_STIE = (1 << 5),       // dozvola tajmerskog prekida (ne koristi se - tajmer stize kao softverski)
-        SIE_SEIE = (1 << 9),       // dozvola spoljasnjeg prekida (konzola)
+        SIE_SSIE = (1 << 1),       // software interrupt enable (timer)
+        SIE_STIE = (1 << 5),       // timer interrupt enable (unused - the timer arrives as a software interrupt)
+        SIE_SEIE = (1 << 9),       // external interrupt enable (console)
     };
 
     static uint64 r_scause();
@@ -96,12 +96,12 @@ inline void Riscv::w_stvec(uint64 stvec) {
     asm volatile("csrw stvec, %0" : : "r"(stvec));
 }
 
-// ulazna tacka prekidne rutine (trap.S) - ide u stvec
+// trap handler entry point (trap.S) - goes into stvec
 extern "C" void trap();
 
-// c deo prekidne rutine: cita scause i grana se na obradu.
-// a0..a4 se poklapaju sa registrima u trenutku trapa (trap.S ih
-// ne dira pre call-a); povratna vrednost se vraca korisniku kroz a0
+// c part of the trap handler: reads scause and branches to the handling.
+// a0..a4 match the registers at the moment of the trap (trap.S does not
+// touch them before the call); the return value goes back to the user in a0
 extern "C" uint64 handleSupervisorTrap(uint64 a0, uint64 a1, uint64 a2, uint64 a3, uint64 a4);
 
 #endif // _riscv_hpp_

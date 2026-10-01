@@ -7,7 +7,7 @@ DEBUG_FLAG = -D DEBUG_PRINT=0
 KERNEL_IMG = kernel
 KERNEL_ASM = kernel.asm
 
-# console.lib vise nije potrebna: zadatak 4 donosi nasu konzolu (ccb)
+# console.lib is no longer needed: part 4 brings our own console (ccb)
 LIBS = \
   ${DIR_LIBS}/hw.lib
 

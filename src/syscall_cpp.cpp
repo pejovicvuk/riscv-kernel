@@ -1,29 +1,29 @@
-// implementacija c++ api-ja: svaka metoda je tanak omotac oko
-// odgovarajuceg c api poziva (koji dalje ide ecall-om u jezgro)
+// c++ api implementation: every method is a thin wrapper around the
+// matching c api call (which then goes into the kernel via ecall)
 #include "../inc/syscall_cpp.hpp"
 
 // ---------- Thread ----------
 
-// javni konstruktor: nit sa pokazivacem na funkciju - pamti body i arg,
-// nit jos NE postoji u jezgru (nastaje tek u start)
+// public constructor: thread with a function pointer - stores body and arg,
+// the thread does NOT exist in the kernel yet (it is created only in start)
 Thread::Thread(void (*body)(void*), void* arg)
     : myHandle(nullptr), body(body), arg(arg) {}
 
-// zasticeni konstruktor: za izvedene klase koje redefinisu run()
+// protected constructor: for derived classes that override run()
 Thread::Thread() : myHandle(nullptr), body(nullptr), arg(nullptr) {}
 
-// destruktor ne radi nista: jezgro samo oslobadja stek i tcb
-// kad nit zavrsi (zombi mehanizam), a c api nema thread_delete
+// the destructor does nothing: the kernel frees the stack and tcb itself
+// when the thread finishes (zombie mechanism), and the c api has no thread_delete
 Thread::~Thread() {}
 
-// tek ovde jezgro pravi nit; kao telo se uvek salje runWrapper sa this,
-// pa se odluka body-ili-run donosi kad nit prvi put dobije procesor
+// only here does the kernel create the thread; runWrapper with this is always
+// passed as the body, so the body-or-run choice is made when the thread first gets the cpu
 int Thread::start() {
     return thread_create(&myHandle, runWrapper, this);
 }
 
-// pdf str. 11: ako je konstruktorom postavljen pokazivac na funkciju,
-// run se ignorise u svakom slucaju - zato body ima prednost
+// spec p. 11: if a function pointer was set by the constructor,
+// run is ignored in any case - so body takes precedence
 void Thread::runWrapper(void* t) {
     Thread* self = (Thread*) t;
     if (self->body) {
@@ -37,7 +37,7 @@ void Thread::dispatch() {
     thread_dispatch();
 }
 
-// nit spava zadati broj perioda tajmera (zadatak 4)
+// the thread sleeps for the given number of timer periods (part 4)
 int Thread::sleep(time_t time) {
     return time_sleep(time);
 }
@@ -46,30 +46,30 @@ int Thread::sleep(time_t time) {
 
 PeriodicThread::PeriodicThread(time_t period) : Thread(), period(period) {}
 
-// telo periodicne niti: aktivacija pa spavanje, dok je neko ne ugasi.
-// interfejs iz pdf-a ne sme da dobije nova polja, pa terminate koristi
-// postojece polje period: 0 = zahtev za kraj (period 0 ionako nema smisla)
+// periodic thread body: activate then sleep, until someone stops it.
+// the interface from the spec must not get new fields, so terminate uses
+// the existing period field: 0 = stop request (period 0 makes no sense anyway)
 void PeriodicThread::run() {
     while (period > 0) {
         periodicActivation();
-        if (period > 0) Thread::sleep(period);   // terminate mogao stici i iz aktivacije
+        if (period > 0) Thread::sleep(period);   // terminate may also come from the activation
     }
 }
 
-// gasenje: tekuce spavanje se dovrsi, nove aktivacije vise nema;
-// nit posle toga regularno zavrsi (izadje iz run petlje)
+// shutdown: the current sleep completes, there are no more activations;
+// after that the thread finishes normally (leaves the run loop)
 void PeriodicThread::terminate() {
     period = 0;
 }
 
 // ---------- Semaphore ----------
 
-// semafor u jezgru nastaje odmah u konstruktoru (nema odvojenog start-a)
+// the kernel semaphore is created right in the constructor (no separate start)
 Semaphore::Semaphore(unsigned init) : myHandle(nullptr) {
     sem_open(&myHandle, init);
 }
 
-// zatvaranje oslobadja scb u jezgru i budi eventualne cekace sa greskom
+// closing frees the kernel scb and wakes any waiters with an error
 Semaphore::~Semaphore() {
     sem_close(myHandle);
 }
@@ -84,8 +84,8 @@ int Semaphore::signal() {
 
 // ---------- Console ----------
 
-// fasada (pdf str. 11): samo prostor imena oko c poziva;
-// :: ispred da se ne bi rekurzivno zvala ista metoda
+// facade (spec p. 11): just a namespace around the c calls;
+// :: in front so the same method is not called recursively
 char Console::getc() {
     return ::getc();
 }

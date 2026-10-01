@@ -4,23 +4,23 @@
 TCB* Scheduler::head = nullptr;
 TCB* Scheduler::tail = nullptr;
 
-// stani na kraj reda
+// append to the tail of the queue
 void Scheduler::put(TCB* thread) {
     thread->next = nullptr;
     if (tail) {
-        tail->next = thread;   // dosadasnji poslednji pokaze na novog
+        tail->next = thread;   // the old last one points to the new one
     } else {
-        head = thread;         // red je bio prazan: novi je i prvi
+        head = thread;         // queue was empty: the new one is also first
     }
-    tail = thread;             // novi je u svakom slucaju poslednji
+    tail = thread;             // the new one is last in any case
 }
 
-// skini nit sa cela reda
+// take a thread from the head of the queue
 TCB* Scheduler::get() {
     TCB* thread = head;
-    if (!thread) return nullptr;   // prazan red
+    if (!thread) return nullptr;   // empty queue
     head = head->next;
-    if (!head) tail = nullptr;     // skinuli smo i poslednjeg
+    if (!head) tail = nullptr;     // we took the last one too
     thread->next = nullptr;
     return thread;
 }

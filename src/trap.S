@@ -1,15 +1,15 @@
-# prekidna rutina: jedina kapija za ecall, izuzetke i prekide (stvec -> ovde).
-# mora da sacuva sve registre koje c funkcija handleSupervisorTrap sme da
-# pokvari (caller-saved: ra, t0-t6, a1-a7), jer prekinuti kod racuna da su
-# netaknuti. a0 se namerno ne cuva/ne vraca: on nosi povratnu vrednost
-# handleSupervisorTrap-a (rezultat sistemskog poziva; za prekide se vraca
-# zateceni a0). s0-s11 ne cuvamo mi: njih po konvenciji cuva sam
-# handleSupervisorTrap ako ih koristi.
+# trap handler: the only gate for ecall, exceptions and interrupts (stvec -> here).
+# it must save all registers the c function handleSupervisorTrap may
+# clobber (caller-saved: ra, t0-t6, a1-a7), because the interrupted code expects
+# them untouched. a0 is deliberately not saved/restored: it carries the return
+# value of handleSupervisorTrap (the system call result; for interrupts the
+# original a0 is returned). we do not save s0-s11: by convention
+# handleSupervisorTrap saves them itself if it uses them.
 
 .align 4
 .global trap
 trap:
-    addi sp, sp, -128      # 15 registara x 8B = 120, zaokruzeno na 128 (sp deljiv sa 16)
+    addi sp, sp, -128      # 15 registers x 8B = 120, rounded up to 128 (sp divisible by 16)
     sd ra, 0(sp)
     sd t0, 8(sp)
     sd t1, 16(sp)
@@ -26,7 +26,7 @@ trap:
     sd a6, 104(sp)
     sd a7, 112(sp)
 
-    call handleSupervisorTrap   # a0..a4 = zateceni registri u trenutku trapa
+    call handleSupervisorTrap   # a0..a4 = registers as they were at the moment of the trap
 
     ld ra, 0(sp)
     ld t0, 8(sp)

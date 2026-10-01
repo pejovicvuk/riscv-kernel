@@ -1,10 +1,10 @@
-// globalni operatori new/delete za KORISNICKI kod (pdf, str. 11):
-// omotavaju sistemske pozive mem_alloc/mem_free, pa svako "new" iz
-// korisnickog programa zavrsi u alokatoru jezgra kroz ecall.
+// global operators new/delete for USER code (spec, p. 11):
+// they wrap the mem_alloc/mem_free system calls, so every "new" in a
+// user program ends up in the kernel allocator through ecall.
 //
-// paznja: jezgro NE SME da koristi ove operatore (ecall iz jezgra bi
-// pregazio sepc tekuceg trapa) - zato klase jezgra (TCB, SCB) imaju
-// svoje operator new/delete koji idu direktno na MemoryAllocator.
+// careful: the kernel MUST NOT use these operators (an ecall from the kernel
+// would overwrite sepc of the current trap) - that is why kernel classes
+// (TCB, SCB) have their own operator new/delete that go straight to MemoryAllocator.
 #include "../inc/syscall_c.h"
 
 void* operator new(size_t size) {

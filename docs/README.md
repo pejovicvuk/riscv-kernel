@@ -1,106 +1,85 @@
-# os1 projekat - lekcije
+# Lessons
 
-skripta projekta: sta smo uradili, kako radi i zasto bas tako.
-svaka lekcija ima "flow" primere - korak po korak kako se stvari desavaju.
-ovo je ujedno i priprema za odbranu: na kraju svake lekcije su pitanja
-na koja treba znati odgovor.
+A walkthrough of the project: what we built, how it works, and why we
+built it that way. Every lesson has "flow" examples that trace, step by
+step, how things happen, and ends with review questions.
 
-## kako citati (za nekog ko projekat vidi prvi put)
+## How to read
 
-1. procitaj lekcije 01-04 redom: platforma, alokator, trap/ecall, prekidi -
-   to je temelj bez kog nista dalje nema smisla
-2. lekcije 05-07: niti - prvo koncept (05), pa kroz sistemske pozive (06),
-   pa spust u korisnicki rezim (07). pazi: primeri koda u 05 su istorijski
-   snimak (napomena na kraju te lekcije kaze sta se od tada promenilo)
-3. lekcije 08-09: zvanicni testovi i semafori
-4. lekcija 10 je GLAVNA MAPA: 7 flowova kroz tekuci kod, od korisnicke
-   linije do jezgra i nazad - citaj je sa otvorenim kodom
-5. lekcije 11-12: zadatak 4 - deljenje vremena, pa time_sleep + konzola +
-   PeriodicThread
+1. Read lessons 01-04 in order: platform, allocator, trap/ecall, interrupts.
+   Everything later builds on these four.
+2. Lessons 05-07: threads. First the concept (05), then threads through
+   system calls (06), then the drop into user mode (07). The code
+   samples in 05 are a historical snapshot; a note at the end of that
+   lesson says what has changed since.
+3. Lessons 08-09: the official tests and semaphores.
+4. Lesson 10 is the main map: 7 flows through the current code, from a
+   user-level line down to the kernel and back. Read it with the code open.
+5. Lessons 11-12: Part 4 of the project. Time sharing first, then
+   `time_sleep`, the console, and `PeriodicThread`.
 
-lekcije su pisane hronoloski i cuvaju istoriju odluka (i pogresnih
-pokusaja - oni se brane!). gde je kasnija lekcija promenila nesto,
-ranija ima napomenu na vrhu ili na mestu izmene.
+The lessons were written chronologically and keep the history of design
+decisions (including wrong attempts and why they were wrong). Where a later
+lesson changed something, the earlier one has a note at the top or at the
+place of the change.
 
-## sadrzaj
+## Contents
 
-| # | lekcija | status |
-|---|---------|--------|
-| 01 | [platforma i okruzenje](01-platforma-i-okruzenje.md) | gotovo |
-| 02 | [alokator memorije (zadatak 1)](02-alokator-memorije.md) | gotovo |
-| 03 | [trap, ecall i sistemski pozivi](03-trap-ecall-abi.md) | gotovo |
-| 04 | [prekidi, maskiranje i veliki bug](04-prekidi-maskiranje-bug.md) | gotovo |
-| 05 | [niti - TCB, Scheduler, promena konteksta](05-niti-kostur.md) | gotovo |
-| 06 | [niti kroz sistemske pozive](06-sistemski-pozivi-niti.md) | gotovo |
-| 07 | [niti u korisnickom rezimu (u-mode)](07-u-mode-niti.md) | gotovo |
-| 08 | [zvanicni testovi + console.lib konzola (istorija)](08-zvanicni-testovi.md) | gotovo |
-| 09 | [semafori (zadatak 3)](09-semafori.md) | gotovo |
-| 10 | [vodic kroz flowove (citanje koda)](10-vodic-kroz-flowove.md) | gotovo |
-| 11 | [deljenje vremena (preotimanje)](11-deljenje-vremena.md) | gotovo |
-| 12 | [zadatak 4 u celosti: sleep, konzola, PeriodicThread](12-zadatak4-sleep-konzola.md) | gotovo |
+| # | Lesson |
+|---|--------|
+| 01 | [Platform and environment](01-platform-and-environment.md) |
+| 02 | [Memory allocator (Part 1)](02-memory-allocator.md) |
+| 03 | [Trap, ecall and system calls](03-trap-ecall-abi.md) |
+| 04 | [Interrupts, masking and the big bug](04-interrupts-masking-bug.md) |
+| 05 | [Threads: TCB, Scheduler, context switch](05-threads-skeleton.md) |
+| 06 | [Threads through system calls](06-thread-syscalls.md) |
+| 07 | [Threads in user mode (U-mode)](07-user-mode-threads.md) |
+| 08 | [Official tests + console.lib console (history)](08-official-tests.md) |
+| 09 | [Semaphores (Part 3)](09-semaphores.md) |
+| 10 | [Code flow guide (reading the code)](10-code-flow-guide.md) |
+| 11 | [Time sharing (preemption)](11-time-sharing.md) |
+| 12 | [Part 4 in full: sleep, console, PeriodicThread](12-sleep-console-periodic.md) |
 
-## trenutno stanje projekta: SVE (zadaci 1-4) GOTOVO I OVERENO
+## Current state
 
-svi zvanicni testovi prolaze (2026-08-05): 1, 2, 3, 4, 5, 6 i 7
-(test 7 "prolazi padom" - ocekivan PANIC cause=2).
+All parts (1-4) are done. All official tests pass: 1, 2, 3, 4, 5, 6 and 7
+(test 7 "passes by failing": it is expected to end with `PANIC cause=2`).
 
-istorija po celinama:
+Summary by part:
 
-- zadatak 1 (alokator): KOMPLETAN - mem_alloc i mem_free kroz ceo ecall lanac,
-  spajanje dokazano (heap se vraca u jedan blok, nula curenja)
-- prekidna rutina: cuva registre, sepc/sstatus po niti (lokali), panika na
-  nepoznat uzrok; maska prekida u sie registru (vazi u oba rezima)
-- zadatak 2 (niti): KOMPLETAN - ZVANICNI TESTOVI 1 i 7 PROLAZE (2026-07-20).
-  syscalls 0x11-0x13, c api, u-mode tela, zombi ciscenje, t-registri prezivljavaju
-  dispatch (test 1: "C: t1=7")
-- konzola, 20p faza (2026-07-21): getc/putc preko console.lib
-  (__getc/__putc + console_handler, pdf: obaveza za one koji NE rade
-  zadatak 4) umesto naseg pollinga; userMain je postao NIT (pdf str. 4).
-  ova faza je ISTORIJA - vidi lekciju 08 (zasto je tako moralo tada)
-  i lekciju 12 (cime je zamenjena)
-- zadatak 3 (semafori): ZVANICNI TEST 3 PROLAZI (2026-07-19); test 1 regresija ok.
-  scb, pozivi 0x21-0x26, trece stanje niti (blokirana), switchToNext refaktor,
-  globalni new/delete za korisnicki sloj (_new.cpp)
-- c++ api (syscall_cpp.hpp/.cpp): GOTOV - ZVANICNI TESTOVI 2 i 4 PROLAZE
-  (2026-07-20). Thread/Semaphore/PeriodicThread/Console kao tanki omotaci;
-  runWrapper bira body ili run() (pdf pravilo)
-- preimenovanje na skolske konvencije (2026-07-21, projektna odluka):
-  trapHandlers.cpp -> riscv.cpp + klasa Riscv
-  (csr helperi r_/w_/ms_/mc_ umesto sirovih asm blokova); handleTrap ->
-  handleSupervisorTrap; newdelete.cpp -> _new.cpp (SCB je probano kao
-  _sem pa VRACENO na SCB; trap.S je probano kao supervisorTrap.S pa
-  VRACENO na trap.S, ulazna labela je sada `trap` - studentove odluke).
-  logika NIJE menjana;
-  unutrasnjost TCB-a (switchToNext, reapZombie, userWrapper, systemLevel)
-  namerno zadrzana nasa - to su nase projektne odluke
-- DELJENJE VREMENA (2026-07-21): preotimanje na tajmerski prekid -
-  TCB::tick + dispatch iz grane code==1, kvantum timeSlice po niti,
-  reset u switchToNext, prekidi u main-u tek posle nulte niti.
-  testovi 3/4 od tada teku KONTINUALNO (overeno)
-- ZADATAK 4 U CELOSTI (2026-08-05, lekcija 12): time_sleep 0x31 (lista
-  uspavanih sa relativnim razlikama u TCB), PRAVA KONZOLA - nova klasa
-  CCB (kruzni baferi + 3 SCB semafora + izlazna sistemska nit; prekidna
-  rutina sama radi plic_claim/complete), console.lib IZBACENA iz
-  Makefile-a; Thread::sleep i PeriodicThread (terminate preko period=0,
-  run() redefinisan); main pred gasenje prazni izlazni bafer (drain).
-  uvezeni testovi 5 i 6, LEVEL_4=1. OVERENO: svi testovi 1-7 prolaze
-  (regresija 1,2,3,4,7 + novi 5,6)
+- **Part 1 (memory allocator):** `mem_alloc` and `mem_free` through the full
+  ecall chain; free-block merging verified (the heap returns to a single
+  block, zero leaks).
+- **Trap handler:** saves registers, keeps `sepc`/`sstatus` per thread (in
+  locals), panics on an unknown cause; interrupts are masked per type in the
+  `sie` register (works in both modes).
+- **Part 2 (threads):** system calls 0x11-0x13, C API, thread bodies run in
+  U-mode, zombie cleanup, t-registers survive a dispatch. `userMain` runs as
+  a thread (as the project specification requires).
+- **Part 3 (semaphores):** `SCB`, calls 0x21-0x26, a third thread state
+  (blocked), global `new`/`delete` for the user layer (`_new.cpp`).
+- **C++ API (`syscall_cpp.hpp`/`.cpp`):** `Thread`, `Semaphore`,
+  `PeriodicThread` and `Console` as thin wrappers; `runWrapper` chooses
+  between `body` and `run()` (rule from the specification).
+- **Time sharing:** preemption on the timer interrupt (`TCB::tick` +
+  dispatch), per-thread time slice, reset in `switchToNext`; interrupts are
+  enabled in `main` only after the initial thread exists.
+- **Part 4:** `time_sleep` (0x31) with a sleep list that stores relative
+  time differences in the TCB; a real console, the `CCB` class (circular
+  buffers + 3 semaphores + an output kernel thread; the interrupt handler
+  does `plic_claim`/`plic_complete` itself), replacing the earlier
+  `console.lib` stage (lesson 08); `Thread::sleep` and `PeriodicThread`
+  (terminated via `period = 0`); before shutdown `main` drains the output
+  buffer.
 
-## slojevi sistema (velika slika)
+## System layers (big picture)
 
 ```
-korisnicki program (test/)          <- zvanicni testovi + nas test 8
-c++ api (Thread, Semaphore...)      <- tanki omotac oko c api-ja
-c api (mem_alloc, thread_...)       <- pakuje registre + ecall
-abi (ecall, a0=kod, a1..=argumenti) <- softverski prekid
-jezgro (TCB, Scheduler, SCB, CCB,   <- srce; ulaz SAMO kroz trap.S,
-        MemoryAllocator)               izlaz SAMO kroz sret
-hw.lib (pristup hardveru)           <- daje fakultet
+user program (test/)                <- official tests + custom test 8
+C++ API (Thread, Semaphore...)      <- thin wrapper around the C API
+C API (mem_alloc, thread_...)       <- packs registers + ecall
+ABI (ecall, a0=code, a1..=args)     <- software interrupt
+kernel (TCB, Scheduler, SCB, CCB,   <- the core; entry ONLY through trap.S,
+        MemoryAllocator)               exit ONLY through sret
+hw.lib (hardware access)            <- provided by the course
 ```
-
-## kako radimo
-
-1. novi kod + objasnjenje toka prostim jezikom
-2. citanje koda liniju po liniju
-3. kontrolna pitanja -> sledeca celina
-4. posle svake celine: update ovih lekcija

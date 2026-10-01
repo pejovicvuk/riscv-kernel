@@ -1,18 +1,18 @@
-# promena konteksta: "zamrzni" tekucu nit, "odmrzni" sledecu.
+# context switch: "freeze" the running thread, "unfreeze" the next one.
 # void contextSwitch(TCB::Context* oldCtx, TCB::Context* newCtx)
-#   a0 = &stari kontekst {ra, sp},  a1 = &novi kontekst {ra, sp}
+#   a0 = &old context {ra, sp},  a1 = &new context {ra, sp}
 #
-# s0-s11 (callee-saved) se spustaju na stek SAME niti pre zamrzavanja:
-# nit ce ih ocekivati netaknute kad se probudi, a u medjuvremenu ce ih
-# druge niti slobodno koristiti. ra/sp idu u tcb (context), ostalo "visi"
-# o sp-u kao kofer o rucki.
+# s0-s11 (callee-saved) are pushed onto the thread's OWN stack before freezing:
+# the thread expects them untouched when it wakes up, and meanwhile other
+# threads may use them freely. ra/sp go into the tcb (context), the rest "hangs"
+# off sp like a suitcase off its handle.
 #
-# paznja: raspored polja mora da se poklapa sa strukturom Context u tcb.hpp
-# (ra na pomeraju 0, sp na pomeraju 8).
+# careful: field layout must match the Context struct in tcb.hpp
+# (ra at offset 0, sp at offset 8).
 
 .global contextSwitch
 contextSwitch:
-    addi sp, sp, -96       # mesto za 12 s-registara (12 x 8B)
+    addi sp, sp, -96       # room for 12 s-registers (12 x 8B)
     sd s0, 0(sp)
     sd s1, 8(sp)
     sd s2, 16(sp)
@@ -26,11 +26,11 @@ contextSwitch:
     sd s10, 80(sp)
     sd s11, 88(sp)
 
-    sd ra, 0(a0)           # stara nit: gde da nastavi kad se probudi
-    sd sp, 8(a0)           # stara nit: rucka kofera        == zamrznuta
+    sd ra, 0(a0)           # old thread: where to resume when it wakes up
+    sd sp, 8(a0)           # old thread: suitcase handle    == frozen
 
-    ld ra, 0(a1)           # nova nit: odakle nastavlja
-    ld sp, 8(a1)           # nova nit: njen stek            == budi se
+    ld ra, 0(a1)           # new thread: where it resumes
+    ld sp, 8(a1)           # new thread: its stack          == wakes up
 
     ld s0, 0(sp)
     ld s1, 8(sp)
@@ -45,4 +45,4 @@ contextSwitch:
     ld s10, 80(sp)
     ld s11, 88(sp)
     addi sp, sp, 96
-    ret                    # skok na ra nove niti: usao kao stara, izasao kao nova
+    ret                    # jump to the new thread's ra: entered as old, left as new

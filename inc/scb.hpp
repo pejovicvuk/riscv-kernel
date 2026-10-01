@@ -5,24 +5,24 @@
 
 class TCB;
 
-// scb (semaphore control block) = semafor u jezgru: brojac slobodnih
-// "mesta" + fifo red niti koje cekaju. iza c api rucke sem_t krije se
-// ovaj tip.
-// konvencija (projektna odluka): value nikad ne ide u minus - cekaci se vide
-// po redu, ne po znaku brojaca.
+// scb (semaphore control block) = kernel semaphore: count of free
+// "slots" + fifo queue of waiting threads. this type hides behind the
+// c api handle sem_t.
+// convention (design decision): value never goes negative - waiters are seen
+// in the queue, not in the sign of the counter.
 class SCB {
 public:
     static SCB* createSemaphore(unsigned init);
 
-    // wait/signal za n jedinica odjednom; obican sem_wait/sem_signal je n == 1
-    // (jedan mehanizam pokriva i 0x23/0x24 i 0x25/0x26).
-    // wait vraca 0 kad je nit legalno prosla, negativno ako je semafor
-    // zatvoren dok je cekala
+    // wait/signal for n units at once; plain sem_wait/sem_signal is n == 1
+    // (one mechanism covers both 0x23/0x24 and 0x25/0x26).
+    // wait returns 0 when the thread passed normally, negative if the
+    // semaphore was closed while it was waiting
     int wait(unsigned n);
     int signal(unsigned n);
-    int close();   // probudi SVE cekace, njihov wait vraca gresku
+    int close();   // wake ALL waiters, their wait returns an error
 
-    // new/delete direktno na alokator jezgra (bez ecall-a), kao kod tcb-a
+    // new/delete go straight to the kernel allocator (no ecall), as for tcb
     void* operator new(size_t size);
     void operator delete(void* ptr);
 
@@ -31,9 +31,9 @@ private:
     void enqueue(TCB* t);
     TCB* dequeue();
 
-    unsigned value;   // broj slobodnih "mesta"
-    TCB* head;        // fifo red blokiranih niti (ulancan kroz TCB::next -
-    TCB* tail;        // nit je uvek u najvise JEDNOM redu, pa je next slobodan)
+    unsigned value;   // number of free "slots"
+    TCB* head;        // fifo queue of blocked threads (linked via TCB::next -
+    TCB* tail;        // a thread is always in at most ONE queue, so next is free)
 };
 
 #endif // _scb_hpp_

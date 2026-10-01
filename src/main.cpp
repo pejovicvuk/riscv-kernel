@@ -5,11 +5,11 @@
 #include "../inc/ccb.hpp"
 #include "../inc/syscall_c.h"
 
-void userMain();   // definisana u test fajlu
+void userMain();   // defined in the test file
 
-// omotac: userMain kao telo niti + zastavica kraja.
-// kraj se NE sme cekati preko rucke niti (tcb zavrsene niti pojede
-// zombi ciscenje), pa nit sama javi da je gotova pre thread_exit-a
+// wrapper: userMain as a thread body + a done flag.
+// the end must NOT be awaited through the thread handle (zombie cleanup eats
+// the tcb of a finished thread), so the thread reports it is done before thread_exit
 static volatile bool userMainDone = false;
 
 static void userMainWrapper(void*) {
@@ -20,49 +20,49 @@ static void userMainWrapper(void*) {
 int main() {
     kputs(">> kernel: starting\n");
 
-    // stvec = adresa prekidne rutine: jedina kapija za ecall/izuzetke/prekide
+    // stvec = trap handler address: the only gate for ecall/exceptions/interrupts
     Riscv::w_stvec((uint64)&trap);
 
     MemoryAllocator::init();
 
-    // main postaje "nulta" nit: dobija svoj tcb da ima gde da se zamrzne
-    // kad prvi put ustupi procesor (kontekst mu se popuni pri prvom dispatch-u)
-    TCB::running = TCB::createThread(nullptr, nullptr, nullptr, true);   // nulta nit je sistemska
+    // main becomes the "zero" thread: it gets its own tcb so it has somewhere to
+    // freeze when it first yields the cpu (its context is filled on the first dispatch)
+    TCB::running = TCB::createThread(nullptr, nullptr, nullptr, true);   // the zero thread is a system thread
 
-    // konzola (zadatak 4): baferi, semafori i izlazna nit jezgra - pre
-    // ukljucivanja prekida, da prvi konzolni prekid zatekne spremne bafere
+    // console (part 4): buffers, semaphores and the kernel output thread - before
+    // enabling interrupts, so the first console interrupt finds the buffers ready
     CCB::init();
 
-    // prekidi se pustaju tek SAD, kad nulta nit postoji: tajmerski otkucaj
-    // naplacuje kvantum tekucoj niti (TCB::tick cita running), pa running
-    // mora biti ziv pre prvog prekida.
-    // sie po vrsti: konzola (seie) MORA - nas CCB::handleInterrupt na njen
-    // prekid puni ulazni bafer sa kontrolera; tajmer (ssie) - pogon
-    // deljenja vremena (preotimanje) i budjenja uspavanih (time_sleep).
+    // interrupts are enabled only NOW, when the zero thread exists: a timer tick
+    // charges the time slice to the running thread (TCB::tick reads running), so
+    // running must be alive before the first interrupt.
+    // sie by type: console (seie) is a MUST - our CCB::handleInterrupt fills the
+    // input buffer from the controller on its interrupt; timer (ssie) - drives
+    // time sharing (preemption) and waking sleepers (time_sleep).
     Riscv::ms_sie(Riscv::SIE_SSIE | Riscv::SIE_SEIE);
 
-    // dozvoli prekide i u sistemskom rezimu (sstatus.SIE): main radi u
-    // s-modu, a prekidi moraju da stizu i dok je on na procesoru.
-    // u-mode niti ovaj bit ne gledaju - za njih vazi direktno sie
+    // enable interrupts in supervisor mode too (sstatus.SIE): main runs in
+    // s-mode, and interrupts must arrive while it is on the cpu as well.
+    // u-mode threads ignore this bit - for them sie applies directly
     Riscv::ms_sstatus(Riscv::SSTATUS_SIE);
 
-    // pdf str. 4: main "pokrece nit nad funkcijom userMain" - kroz obican
-    // thread_create (ecall radi i iz sistemskog rezima), pa ustupa
-    // procesor sve dok korisnicki program ne zavrsi
+    // spec p. 4: main "starts a thread over the userMain function" - via plain
+    // thread_create (ecall works from supervisor mode too), then yields
+    // the cpu until the user program finishes
     thread_t userThread;
     if (thread_create(&userThread, userMainWrapper, nullptr) != 0) {
-        kputs(">> kernel: neuspesno kreiranje userMain niti\n");
+        kputs(">> kernel: failed to create userMain thread\n");
     } else {
         while (!userMainDone) thread_dispatch();
     }
 
-    // pre gasenja: pusti izlaznu nit da posalje sve iz izlaznog bafera -
-    // inace bi poslednje poruke testa nestale zajedno sa emulatorom
+    // before shutdown: let the output thread send everything in the output buffer -
+    // otherwise the last test messages would vanish together with the emulator
     while (!CCB::outputEmpty()) thread_dispatch();
 
     kputs(">> kernel: userMain finished, halting\n");
 
-    // upis 0x5555 na 0x100000 gasi emulator (regularan kraj procesa)
+    // writing 0x5555 to 0x100000 shuts down the emulator (normal exit)
     *(volatile int*)0x100000 = 0x5555;
 
     return 0;

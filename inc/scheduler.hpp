@@ -3,16 +3,16 @@
 
 class TCB;
 
-// red spremnih niti (fifo): niti koje cekaju procesor;
-// tekuca nit (TCB::running) nije u ovom redu
+// ready queue (fifo): threads waiting for the cpu;
+// the running thread (TCB::running) is not in this queue
 class Scheduler {
 public:
-    static void put(TCB* thread);   // stani na kraj reda
-    static TCB* get();              // skini nit sa cela reda (nullptr ako je prazan)
+    static void put(TCB* thread);   // append to the tail of the queue
+    static TCB* get();              // take a thread from the head (nullptr if empty)
 
 private:
-    static TCB* head;   // celo reda (sledeci dobija procesor)
-    static TCB* tail;   // kraj reda (tu staju novopristigli)
+    static TCB* head;   // head of the queue (gets the cpu next)
+    static TCB* tail;   // tail of the queue (new arrivals go here)
 };
 
 #endif // _scheduler_hpp_

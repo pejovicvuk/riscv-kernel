@@ -3,8 +3,8 @@
 
 #include "../lib/hw.h"
 
-// debug alati za direktan ispis na konzolu (polling, bez prekida);
-// nisu deo resenja koje se predaje
+// debug tools for direct console output (polling, no interrupts);
+// not part of the submitted solution
 void kputc(char c);
 void kputs(const char* s);
 void kputhex(uint64 n);

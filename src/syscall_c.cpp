@@ -4,10 +4,10 @@
 void* mem_alloc(size_t size) {
     if (size == 0) return nullptr;
 
-    // abi poziv 0x01 prima velicinu u blokovima: zaokruzi bajtove navise
+    // abi call 0x01 takes the size in blocks: round bytes up
     size_t numBlocks = (size + MEM_BLOCK_SIZE - 1) / MEM_BLOCK_SIZE;
 
-    // spakuj registre pa ecall; povratna vrednost stize nazad u a0
+    // load the registers then ecall; the return value comes back in a0
     register uint64 code   asm("a0") = 0x01;
     register uint64 blocks asm("a1") = numBlocks;
     asm volatile("ecall"
@@ -19,7 +19,7 @@ void* mem_alloc(size_t size) {
 }
 
 int mem_free(void* ptr) {
-    // abi poziv 0x02: a1 = pokazivac dobijen iz mem_alloc
+    // abi call 0x02: a1 = pointer obtained from mem_alloc
     register uint64 code asm("a0") = 0x02;
     register uint64 p    asm("a1") = (uint64)ptr;
     asm volatile("ecall"
@@ -27,14 +27,14 @@ int mem_free(void* ptr) {
         : "r"(code), "r"(p)
         : "memory");
 
-    return (int)code;   // 0 = uspeh, negativno = greska
+    return (int)code;   // 0 = success, negative = error
 }
 
 int thread_create(thread_t* handle, void (*start_routine)(void*), void* arg) {
     if (!handle || !start_routine) return -1;
 
-    // pdf, abi poziv 0x11: stek niti alocira OVAJ sloj (kroz mem_alloc,
-    // dakle jos jedan ecall), pa ga prosledjuje jezgru kao 4. argument
+    // spec, abi call 0x11: the thread stack is allocated by THIS layer (via mem_alloc,
+    // i.e. one more ecall), then passed to the kernel as the 4th argument
     void* stackSpace = mem_alloc(DEFAULT_STACK_SIZE);
     if (!stackSpace) return -2;
 
@@ -49,14 +49,14 @@ int thread_create(thread_t* handle, void (*start_routine)(void*), void* arg) {
         : "memory");
 
     int result = (int)code;
-    if (result != 0) mem_free(stackSpace);   // nit nije nastala - vrati stek
+    if (result != 0) mem_free(stackSpace);   // thread was not created - give the stack back
     return result;
 }
 
 int thread_exit() {
     register uint64 code asm("a0") = 0x12;
     asm volatile("ecall" : "=r"(code) : "r"(code) : "memory");
-    return (int)code;   // dovde stize samo u slucaju neuspeha
+    return (int)code;   // reached only on failure
 }
 
 void thread_dispatch() {

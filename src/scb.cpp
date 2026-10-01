@@ -16,7 +16,7 @@ SCB* SCB::createSemaphore(unsigned init) {
     return new SCB(init);
 }
 
-// isti fifo obrazac kao Scheduler - stani na kraj / skini sa cela
+// same fifo pattern as Scheduler - append at tail / take from head
 void SCB::enqueue(TCB* t) {
     t->next = nullptr;
     if (tail) tail->next = t;
@@ -35,26 +35,26 @@ TCB* SCB::dequeue() {
 
 int SCB::wait(unsigned n) {
     if (value >= n) {
-        value -= n;      // ima mesta: prodji odmah
+        value -= n;      // slots available: pass right away
         return 0;
     }
-    // nema mesta: stani u red OVOG semafora i predaj procesor.
-    // nit NE ide u scheduler - za nju zna samo ovaj red, dok je neko
-    // (signal ili close) ne vrati medju spremne.
+    // no slots: join the queue of THIS semaphore and give up the cpu.
+    // the thread does NOT go to the scheduler - only this queue knows about it,
+    // until someone (signal or close) puts it back among the ready ones.
     TCB* self = TCB::running;
     self->blockResult = 0;
-    self->pendingN = n;      // koliko jedinica ceka (za signal-ovu proveru)
+    self->pendingN = n;      // how many units it waits for (for the check in signal)
     enqueue(self);
     TCB::switchToNext();
-    // budjenje: neko nas je vratio u scheduler i dosli smo na red
-    return self->blockResult;   // 0 = pusteni signalom; negativno = close
+    // wake-up: someone put us back in the scheduler and it is our turn
+    return self->blockResult;   // 0 = released by signal; negative = close
 }
 
 int SCB::signal(unsigned n) {
     value += n;
-    // pusti redom sa cela sve koje sada mozemo da usluzimo.
-    // fifo bez preskakanja: ako celu kolonu drzi cekac sa velikim n,
-    // niko iza njega ne prolazi - nema izgladnjivanja cela
+    // release, in order from the head, all we can serve now.
+    // fifo with no skipping: if a waiter with a large n holds the head,
+    // nobody behind it passes - no starvation of the head
     while (head && value >= head->pendingN) {
         TCB* t = dequeue();
         value -= t->pendingN;
@@ -65,7 +65,7 @@ int SCB::signal(unsigned n) {
 }
 
 int SCB::close() {
-    // svi cekaci se bude, ali sa greskom - njihov sem_wait vraca negativno
+    // all waiters are woken, but with an error - their sem_wait returns negative
     TCB* t;
     while ((t = dequeue()) != nullptr) {
         t->blockResult = -1;

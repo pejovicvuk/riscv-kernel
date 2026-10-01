@@ -17,33 +17,33 @@ int  CCB::outputTail = 0;
 SCB* CCB::outputItems = nullptr;
 SCB* CCB::outputSpace = nullptr;
 
-// semafori nastaju direktno kroz SCB (jezgro sebi ne zvoni ecall-om!),
-// a stek izlazne niti direktno iz alokatora - iz istog razloga
+// semaphores are created directly through SCB (the kernel does not ecall itself!),
+// and the output thread stack comes directly from the allocator - same reason
 void CCB::init() {
     inputItems  = SCB::createSemaphore(0);
     outputItems = SCB::createSemaphore(0);
     outputSpace = SCB::createSemaphore(BUFFER_SIZE);
 
-    // izlazna nit jezgra: vecni potrosac izlaznog bafera. sistemska je
-    // (pdf str. 27: telo internih niti radi u sistemskom rezimu, da sme
-    // da pristupa registrima kontrolera)
+    // kernel output thread: endless consumer of the output buffer. it is a
+    // system thread (spec p. 27: internal thread bodies run in supervisor mode,
+    // so they may access controller registers)
     TCB::createThread(&outputBody, nullptr,
                       MemoryAllocator::alloc(DEFAULT_STACK_SIZE), true);
 }
 
-// konzolni prekid: kontroler javlja "imam znak sa tastature" i/ili
-// "spreman sam za slanje". ovde radimo SAMO ulaz (prekidna rutina je
-// proizvodjac, pdf str. 27); izlaz ne diramo - njega izlazna nit salje
-// prozivanjem, pa joj prekid nije potreban.
-// plic_claim kaze koji uredjaj je prekinuo, plic_complete potvrdi obradu
+// console interrupt: the controller reports "i have a char from the keyboard"
+// and/or "i am ready to send". here we do ONLY input (the interrupt handler is
+// the producer, spec p. 27); output is not touched - the output thread sends it
+// by polling, so it needs no interrupt.
+// plic_claim tells which device interrupted, plic_complete acknowledges it
 void CCB::handleInterrupt() {
     int irq = plic_claim();
     if (irq == CONSOLE_IRQ) {
-        // pokupi znakove dok ih ima (u jednom prekidu moze stici vise)
+        // collect chars while there are any (several may arrive in one interrupt)
         while (*(volatile char*)CONSOLE_STATUS & CONSOLE_RX_STATUS_BIT) {
-            char c = *(volatile char*)CONSOLE_RX_DATA;   // uvek skini iz kontrolera
+            char c = *(volatile char*)CONSOLE_RX_DATA;   // always take it from the controller
             int nextTail = (inputTail + 1) % BUFFER_SIZE;
-            if (nextTail == inputHead) continue;   // pun bafer: znak se odbacuje (pdf str. 27)
+            if (nextTail == inputHead) continue;   // full buffer: char is dropped (spec p. 27)
             inputBuffer[inputTail] = c;
             inputTail = nextTail;
             inputItems->signal(1);
@@ -52,19 +52,19 @@ void CCB::handleInterrupt() {
     if (irq) plic_complete(irq);
 }
 
-// syscall 0x41: uzmi znak iz ulaznog bafera; prazan bafer -> pozivajuca
-// nit blokira na semaforu (spava kao kod sem_wait), a budi je prekidna
-// rutina signalom kad znak stigne sa tastature
+// syscall 0x41: take a char from the input buffer; empty buffer -> the calling
+// thread blocks on the semaphore (sleeps as in sem_wait), and the interrupt
+// handler wakes it with a signal when a char arrives from the keyboard
 char CCB::getc() {
-    if (inputItems->wait(1) < 0) return -1;   // (nedostizno: ovaj semafor se ne gasi)
+    if (inputItems->wait(1) < 0) return -1;   // (unreachable: this semaphore is never closed)
     char c = inputBuffer[inputHead];
     inputHead = (inputHead + 1) % BUFFER_SIZE;
     return c;
 }
 
-// syscall 0x42: stavi znak u izlazni bafer; pun bafer -> pozivalac
-// blokira dok izlazna nit ne oslobodi mesto (pdf str. 27 nudi blokadu
-// ili gresku - biramo blokadu, prirodna je uz semafor slobodnih mesta)
+// syscall 0x42: put a char into the output buffer; full buffer -> the caller
+// blocks until the output thread frees a slot (spec p. 27 allows blocking
+// or an error - we block, it is natural with a free-slots semaphore)
 void CCB::putc(char c) {
     outputSpace->wait(1);
     outputBuffer[outputTail] = c;
@@ -76,17 +76,17 @@ bool CCB::outputEmpty() {
     return outputHead == outputTail;
 }
 
-// vecni potrosac: ceka znak (na praznom baferu blokira - tada jedino i
-// ustupa procesor), pa PROZIVANJEM saceka spremnost kontrolera i posalje.
-// telo radi u s-modu sa maskiranim prekidima (sistemska nit se ne spusta
-// sret-om), pa su pristupi baferu prirodno atomski prema putc-u iz trapa
+// endless consumer: waits for a char (blocks on an empty buffer - the only
+// time it yields the cpu), then waits for the controller by POLLING and sends.
+// the body runs in s-mode with interrupts masked (a system thread is not dropped
+// via sret), so buffer accesses are naturally atomic w.r.t. putc from a trap
 void CCB::outputBody(void*) {
     for (;;) {
         outputItems->wait(1);
         char c = outputBuffer[outputHead];
         outputHead = (outputHead + 1) % BUFFER_SIZE;
         while (!(*(volatile char*)CONSOLE_STATUS & CONSOLE_TX_STATUS_BIT)) {
-            // bit 5 == 0: kontroler jos salje prethodni znak
+            // bit 5 == 0: controller is still sending the previous char
         }
         *(volatile char*)CONSOLE_TX_DATA = c;
         outputSpace->signal(1);

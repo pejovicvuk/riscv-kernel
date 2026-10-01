@@ -3,11 +3,11 @@
 
 #include "syscall_c.h"
 
-// c++ api jezgra (potpisi iz postavke projekta, str. 10 - ne smeju se menjati!).
-// tanki omotaci oko c api-ja: svaka klasa samo prosledjuje pozive
-// odgovarajucem sistemskom pozivu preko svoje rucke (myHandle).
+// kernel c++ api (signatures from the project spec, p. 10 - must not be changed!).
+// thin wrappers around the c api: each class just forwards calls
+// to the matching system call through its handle (myHandle).
 
-// globalni new/delete su preusmereni na mem_alloc/mem_free (src/_new.cpp)
+// global new/delete are redirected to mem_alloc/mem_free (src/_new.cpp)
 void* operator new(size_t size);
 void  operator delete(void* ptr) noexcept;
 
@@ -29,8 +29,8 @@ private:
     thread_t myHandle;
     void (*body)(void*); void* arg;
 
-    // telo koje jezgro stvarno pokrece: dobija this, pa bira body ili run()
-    // (pdf str. 11: ako je konstruktorom dat pokazivac na funkciju, run se ignorise)
+    // the body the kernel actually starts: gets this, then picks body or run()
+    // (spec p. 11: if a function pointer was given to the constructor, run is ignored)
     static void runWrapper(void* t);
 };
 
@@ -54,9 +54,9 @@ protected:
     PeriodicThread(time_t period);
     virtual void periodicActivation() {}
 
-    // telo periodicne niti: aktivacija pa spavanje, u krug (zadatak 4).
-    // redefinicija POSTOJECEG virtuelnog run() - interfejs iz pdf-a se ne
-    // sme siriti novim poljima ni novim virtuelnim metodama (str. 11)
+    // periodic thread body: activate then sleep, in a loop (part 4).
+    // overrides the EXISTING virtual run() - the interface from the spec must
+    // not be extended with new fields or new virtual methods (p. 11)
     void run() override;
 
 private:

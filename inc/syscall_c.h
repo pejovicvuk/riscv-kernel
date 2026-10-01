@@ -3,14 +3,14 @@
 
 #include "../lib/hw.h"
 
-// c api jezgra (potpisi iz postavke projekta).
-// ime fajla je syscall_c.h (ne .hpp) jer ga zvanicni testovi tako include-uju.
+// kernel c api (signatures from the project spec).
+// the file is named syscall_c.h (not .hpp) because the official tests include it that way.
 
 void* mem_alloc(size_t size);
 int mem_free(void*);
 
-// "rucka" niti: neproziran pokazivac - korisnik ne zna (i ne treba da zna)
-// sta je unutra; jezgro iza njega krije svoj TCB
+// thread "handle": opaque pointer - the user does not know (and need not know)
+// what is inside; the kernel hides its TCB behind it
 class _thread;
 typedef _thread* thread_t;
 
@@ -18,7 +18,7 @@ int  thread_create(thread_t* handle, void (*start_routine)(void*), void* arg);
 int  thread_exit();
 void thread_dispatch();
 
-// semafori - "rucka" po istom obrascu kao thread_t (iza nje je SCB jezgra)
+// semaphores - "handle" in the same pattern as thread_t (kernel SCB behind it)
 class _sem;
 typedef _sem* sem_t;
 
@@ -29,10 +29,10 @@ int sem_signal(sem_t id);
 int sem_wait_n(sem_t id, unsigned n);
 int sem_signal_n(sem_t id, unsigned n);
 
-// uspavljivanje: nit spava zadati broj perioda tajmera (zadatak 4)
+// sleep: the thread sleeps for the given number of timer periods (part 4)
 int time_sleep(time_t);
 
-// konzola
+// console
 const int EOF = -1;
 char getc();
 void putc(char);

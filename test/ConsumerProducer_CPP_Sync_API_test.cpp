@@ -113,23 +113,23 @@ void producerConsumer_CPP_Sync_API() {
     char input[30];
     int n, threadNum;
 
-    printString("Unesite broj proizvodjaca?\n");
+    printString("Enter the number of producers?\n");
     getString(input, 30);
     threadNum = stringToInt(input);
 
-    printString("Unesite velicinu bafera?\n");
+    printString("Enter the buffer size?\n");
     getString(input, 30);
     n = stringToInt(input);
 
-    printString("Broj proizvodjaca "); printInt(threadNum);
-    printString(" i velicina bafera "); printInt(n);
+    printString("Number of producers "); printInt(threadNum);
+    printString(" and buffer size "); printInt(n);
     printString(".\n");
 
     if(threadNum > n) {
-        printString("Broj proizvodjaca ne sme biti manji od velicine bafera!\n");
+        printString("Number of producers must not be less than the buffer size!\n");
         return;
     } else if (threadNum < 1) {
-        printString("Broj proizvodjaca mora biti veci od nula!\n");
+        printString("Number of producers must be greater than zero!\n");
         return;
     }
 

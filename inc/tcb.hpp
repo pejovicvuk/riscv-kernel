@@ -3,107 +3,107 @@
 
 #include "../lib/hw.h"
 
-// tcb (thread control block) = "licna karta" jedne niti:
-// sve sto jezgro mora da zna o niti da bi mogla da se pauzira i nastavi
+// tcb (thread control block) = the "id card" of one thread:
+// everything the kernel must know about a thread to pause and resume it
 class TCB {
 public:
-    typedef void (*Body)(void*);   // tip za telo niti: funkcija koja prima void*
+    typedef void (*Body)(void*);   // type of a thread body: function taking void*
 
-    // zamrznuta slika niti: dovoljni su ra (gde je stala) i sp (vrh njenog
-    // steka) - ostali registri se cuvaju na njenom steku, pa ih sp "vuce" sobom.
-    // paznja: raspored polja (ra pa sp) mora da se poklapa sa contextSwitch.S!
+    // frozen snapshot of a thread: ra (where it stopped) and sp (top of its
+    // stack) are enough - other registers are saved on its stack, so sp "drags" them along.
+    // careful: field layout (ra then sp) must match contextSwitch.S!
     struct Context {
         uint64 ra;
         uint64 sp;
     };
 
-    // fabrika: napravi nit nad datom funkcijom (telo + argument).
-    // stek NE alocira jezgro - stize spolja (c api ga uzima kroz mem_alloc,
-    // po abi potpisu poziva 0x11 iz pdf-a). namesti pocetni kontekst i
-    // (ako ima telo) ubaci nit u red spremnih.
-    // systemLevel: true samo za interne niti jezgra (telo ostaje u s-modu);
-    // korisnicke niti (preko syscall-a 0x11) idu sa false - telo u u-modu
+    // factory: create a thread over the given function (body + argument).
+    // the stack is NOT allocated by the kernel - it comes from outside (the c api
+    // takes it via mem_alloc, per the abi signature of call 0x11 in the spec).
+    // sets up the initial context and (if it has a body) puts the thread in the ready queue.
+    // systemLevel: true only for internal kernel threads (body stays in s-mode);
+    // user threads (via syscall 0x11) use false - body runs in u-mode
     static TCB* createThread(Body body, void* arg, void* stackSpace, bool systemLevel);
 
-    // sinhrona promena konteksta: tekuca nit ustupa procesor sledecoj iz reda
+    // synchronous context switch: the running thread yields to the next one in the queue
     static void dispatch();
 
-    // otkucaj tajmera: naplati jedan otkucaj tekucoj niti;
-    // vraca true kad je kvantum istekao (vreme za preotimanje)
+    // timer tick: charge one tick to the running thread;
+    // returns true when the time slice has expired (time to preempt)
     static bool tick();
 
-    // uspavi tekucu nit na zadati broj otkucaja tajmera (time_sleep);
-    // budi je tajmerska grana prekidne rutine kroz wakeSleepers
+    // put the running thread to sleep for the given number of timer ticks (time_sleep);
+    // the timer branch of the trap handler wakes it via wakeSleepers
     static int putToSleep(time_t ticks);
 
-    // otkucaj tajmera za listu uspavanih: odbroji celu liste (relativno
-    // vreme!), pa vrati medju spremne sve kojima je vreme isteklo
+    // timer tick for the sleep list: count down the head of the list (relative
+    // time!), then move back to ready all whose time has expired
     static void wakeSleepers();
 
     bool isFinished() const { return finished; }
     void setFinished(bool f) { finished = f; }
 
-    // nit koja se trenutno izvrsava; jedna jedina
+    // the thread currently running; exactly one
     static TCB* running;
 
-    // new/delete za tcb idu direktno na MemoryAllocator (jezgro ne sme
-    // da zove sopstveni sistemski poziv mem_alloc kroz ecall);
-    // isti obrazac ima i SCB
+    // new/delete for tcb go straight to MemoryAllocator (the kernel must not
+    // call its own mem_alloc system call through ecall);
+    // SCB uses the same pattern
     void* operator new(size_t size);
     void operator delete(void* ptr);
 
 private:
     TCB(Body body, void* arg, uint64* stack, bool systemLevel);
 
-    // omotac tela niti, s-mode deo: prva funkcija u zivotu svake niti.
-    // internim nitima jezgra odmah pozove telo; korisnicke niti SPUSTA
-    // u korisnicki rezim (sepc=userWrapper, spp=0, sret)
+    // thread body wrapper, s-mode part: first function in every thread's life.
+    // for internal kernel threads it calls the body right away; user threads are
+    // DROPPED to user mode (sepc=userWrapper, spp=0, sret)
     static void threadWrapper();
 
-    // omotac tela niti, u-mode deo: izvrsava se u korisnickom rezimu -
-    // pozove telo, pa se jedinim dozvoljenim putem (ecall: thread_exit)
-    // vrati u jezgro
+    // thread body wrapper, u-mode part: runs in user mode -
+    // calls the body, then returns to the kernel the only allowed way
+    // (ecall: thread_exit)
     static void userWrapper();
 
-    // zombi mehanizam: gotova nit ne sme da oslobodi stek NA KOM STOJI,
-    // pa je samo zabelezimo; pocisti je prva sledeca probudjena nit
-    // (koja stoji na svom, bezbednom steku)
+    // zombie mechanism: a finished thread must not free the stack IT IS STANDING ON,
+    // so we only record it; the next thread that wakes up cleans it up
+    // (standing on its own, safe stack)
     static TCB* zombie;
     static void reapZombie();
 
-    // prebaci se na sledecu spremnu nit BEZ zbrinjavanja tekuce -
-    // pozivalac je vec smestio tekucu tamo gde joj je mesto
-    // (red spremnih / red semafora / zombi)
+    // switch to the next ready thread WITHOUT taking care of the current one -
+    // the caller has already put the current one where it belongs
+    // (ready queue / semaphore queue / zombie)
     static void switchToNext();
 
-    // potroseni deo kvantuma TEKUCE niti (u otkucajima tajmera);
-    // jedna promenljiva je dovoljna - odnosi se uvek samo na running,
-    // a resetuje se na JEDNOM mestu: u switchToNext, pri izboru nove niti
+    // used part of the time slice of the RUNNING thread (in timer ticks);
+    // one variable is enough - it always refers only to running,
+    // and is reset in ONE place: in switchToNext, when a new thread is picked
     static uint64 usedTicks;
 
-    // lista uspavanih niti (time_sleep), sortirana po trenutku budjenja.
-    // svaki clan pamti vreme RELATIVNO na prethodnika (pdf str. 26): zbir
-    // razlika od cela do niti = njeno apsolutno vreme. otkucaj tako dira
-    // SAMO celo liste; jedina slozenija operacija je umetanje
+    // list of sleeping threads (time_sleep), sorted by wake-up time.
+    // each node stores time RELATIVE to its predecessor (spec p. 26): the sum
+    // of deltas from the head to a thread = its absolute time. so a tick touches
+    // ONLY the head of the list; the only harder operation is insertion
     static TCB* sleepHead;
 
-    Body body;        // funkcija koju nit izvrsava
-    void* arg;        // argument te funkcije
-    uint64* stack;    // pocetak alociranog prostora za stek (za kasnije oslobadjanje)
-    Context context;  // zamrznuta slika (vazi samo dok nit ne radi)
-    bool finished;    // da li je nit zavrsila
-    bool systemLevel; // true = interna nit jezgra (telo radi u s-modu)
-    time_t timeSlice; // kvantum OVE niti (podrazumevano DEFAULT_TIME_SLICE)
-    TCB* next;        // ulancavanje u TACNO JEDAN red u datom trenutku:
-                      // ili Scheduler (spremna) ili red jednog semafora
-                      // (blokirana) - nikad oba, pa je jedan pokazivac dovoljan
-    int blockResult;  // ishod cekanja na semaforu: 0 ok, negativno = zatvoren
-    uint64 pendingN;  // koliko jedinica semafora nit ceka (sem_wait_n)
-    time_t sleepRelative; // preostali otkucaji do budjenja, RELATIVNO na
-                          // prethodnika u listi uspavanih (0 = isti trenutak)
+    Body body;        // function the thread runs
+    void* arg;        // argument of that function
+    uint64* stack;    // start of the allocated stack space (to free it later)
+    Context context;  // frozen snapshot (valid only while the thread is not running)
+    bool finished;    // has the thread finished
+    bool systemLevel; // true = internal kernel thread (body runs in s-mode)
+    time_t timeSlice; // time slice of THIS thread (default DEFAULT_TIME_SLICE)
+    TCB* next;        // link in EXACTLY ONE queue at any moment:
+                      // either Scheduler (ready) or one semaphore's queue
+                      // (blocked) - never both, so one pointer is enough
+    int blockResult;  // outcome of waiting on a semaphore: 0 ok, negative = closed
+    uint64 pendingN;  // how many semaphore units the thread waits for (sem_wait_n)
+    time_t sleepRelative; // ticks left until wake-up, RELATIVE to the
+                          // predecessor in the sleep list (0 = same moment)
 
-    friend class Scheduler;   // Scheduler sme da koristi next za svoj red
-    friend class SCB;         // semafor blokira/ulancava niti u svoj red
+    friend class Scheduler;   // Scheduler may use next for its queue
+    friend class SCB;         // semaphore blocks/links threads into its queue
 };
 
 #endif // _tcb_hpp_

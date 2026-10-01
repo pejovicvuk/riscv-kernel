@@ -3,21 +3,21 @@
 
 #include "../lib/hw.h"
 
-// alokator memorije jezgra: intruzivna slobodna lista (heder zivi u prvih
-// 16B svakog bloka), first-fit, sve alokacije umnozak MEM_BLOCK_SIZE
+// kernel memory allocator: intrusive free list (header lives in the first
+// 16B of every block), first-fit, all allocations a multiple of MEM_BLOCK_SIZE
 class MemoryAllocator {
 private:
     struct FreeBlock {
         FreeBlock* next;
-        size_t size;   // velicina ovog bloka u bajtovima (ukljucuje heder)
+        size_t size;   // size of this block in bytes (header included)
     };
-    static FreeBlock* freeListHead;   // celo slobodne liste
-    MemoryAllocator() = delete;       // all-static klasa, ne instancira se
+    static FreeBlock* freeListHead;   // head of the free list
+    MemoryAllocator() = delete;       // all-static class, never instantiated
 public:
     static void init();
     static void* alloc(size_t size);
     static int free(void* ptr);
-    static void printFreeList();      // debug alat
+    static void printFreeList();      // debug tool
 };
 
 #endif // _memory_allocator_hpp_

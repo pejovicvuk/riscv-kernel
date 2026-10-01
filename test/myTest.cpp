@@ -5,11 +5,11 @@ static sem_t start, finish;
 
 void body(void* arg){
     uint64 id = (uint64)arg;
-    printString("nit "); printInt(id); printString(" je pokrenuta \n");
+    printString("thread "); printInt(id); printString(" started \n");
     sem_wait(start);
-    printString("nit "); printInt(id); printString(" je krenula sa radom \n");
+    printString("thread "); printInt(id); printString(" began working \n");
     for (volatile uint64 i = 0; i < 10000000 * (id+1); i++);
-    printString("nit "); printInt(id); printString(" je gotova sa radom \n");
+    printString("thread "); printInt(id); printString(" finished working \n");
     sem_signal(finish);
 };
 
@@ -22,16 +22,16 @@ void my_test() {
         thread_create(&threads[i], body, (void*)(uint64)i);
     }
 
-    // pusti ih da SVE stignu do rampe i tamo zaspu.
-    // jedan dispatch je dovoljan: blokirana nit ne ide u red spremnih,
-    // pa switchToNext lancano izvuce sve iz reda, i tek onda vrati mene
+    // let ALL of them reach the gate and block there.
+    // one dispatch is enough: a blocked thread does not go to the ready queue,
+    // so switchToNext chains through the whole queue and only then returns to me
     thread_dispatch();
 
-    printString("-- svi cekaju, otvaram rampu --\n");
-    sem_signal_n(start, 5);             // SAD ima 5 cekaca -> svih 5 se budi
+    printString("-- all waiting, opening the gate --\n");
+    sem_signal_n(start, 5);             // NOW there are 5 waiters -> all 5 wake up
 
     sem_wait_n(finish, 5);
-    printString("sve niti su zavrsile sa radom \n");
+    printString("all threads finished working \n");
 
     sem_close(start);
     sem_close(finish);
